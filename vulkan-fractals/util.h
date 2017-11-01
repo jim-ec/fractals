@@ -1,12 +1,20 @@
 #pragma once
 
 #include <iostream>
-#include <vulkan/vulkan.h>
 #include <tuple>
 #include <algorithm>
 #include <iterator>
 #include <array>
 #include <utility>
+
+#include <vulkan/vulkan.h>
+
+#include <fmt/printf.h>
+#include <fmt/format.h>
+#include <fmt/string.h>
+#include <fmt/ostream.h>
+#include <fmt/time.h>
+#include <fmt/container.h>
 
 extern const std::array<std::pair<VkResult, const char *>, 18> VULKAN_ERROR_STRINGS;
 
@@ -63,7 +71,7 @@ void checkVk(VkResult result, const Args &...args)
 }
 
 template<class PFN_TYPE, class... Args>
-auto invokeVk(VkInstance instance, const std::string &name, const Args &...args)
+auto invokeVk(const std::string &name, VkInstance instance, const Args &...args)
 {
     auto func = reinterpret_cast<PFN_TYPE>(vkGetInstanceProcAddr(instance, name.c_str()));
     check(func != nullptr, "Cannot load Vulkan function ", name);

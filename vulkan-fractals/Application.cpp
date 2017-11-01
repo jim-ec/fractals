@@ -71,9 +71,8 @@ Application::Application()
         info.pfnCallback = &debugCallback;
         info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
-        checkVk(invokeVk<PFN_vkCreateDebugReportCallbackEXT>(mInstance, "vkCreateDebugReportCallbackEXT", &info,
-                nullptr, &mDebugCallback),
-                "Cannot create debug report callback");
+        checkVk(invokeVk<PFN_vkCreateDebugReportCallbackEXT>("vkCreateDebugReportCallbackEXT", mInstance, &info,
+                nullptr, &mDebugCallback), "Cannot create debug report callback");
     }
 
     // Get physical device:
@@ -82,12 +81,17 @@ Application::Application()
         vkEnumeratePhysicalDevices(mInstance, &count, nullptr);
         std::vector<VkPhysicalDevice> physicalDevices{count};
         vkEnumeratePhysicalDevices(mInstance, &count, physicalDevices.data());
+
+        check(!physicalDevices.empty(), "No physical devices available");
+
+        VkDeviceCreateInfo deviceInfo = {};
+        deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     }
 }
 
 Application::~Application()
 {
-    invokeVk<PFN_vkDestroyDebugReportCallbackEXT>(mInstance, "vkDestroyDebugReportCallbackEXT", mDebugCallback,
+    invokeVk<PFN_vkDestroyDebugReportCallbackEXT>("vkDestroyDebugReportCallbackEXT", mInstance, mDebugCallback,
             nullptr);
     vkDestroyInstance(mInstance, nullptr);
     glfwDestroyWindow(mWindow);
@@ -103,9 +107,9 @@ void Application::run()
     }
 }
 
-VkBool32 Application::debugCallback(
-        VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t,
-        size_t, int32_t, const char *, const char *msg, void *)
+VkBool32
+Application::debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char *,
+                           const char *msg, void *)
 {
     std::cout << "VK-DEBUG: " << msg << std::endl;
     return VK_FALSE;
