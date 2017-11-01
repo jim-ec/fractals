@@ -28,4 +28,4 @@ To tune the fractal you see, you have to go into the source code, namely `main.c
 
 Contained inside the `console-fractals` directory.
 
-Displays fractals using the Vulkan API. Exact features are not 
+Displays fractals using the Vulkan API. Exact features have not been set, yet.
