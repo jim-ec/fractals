@@ -19,36 +19,36 @@
 extern const std::array<std::pair<VkResult, const char *>, 18> VULKAN_ERROR_STRINGS;
 
 template<class T>
-void check(bool condition, const T &message)
+void check(bool condition, T &&message)
 {
     if (condition) return;
-    std::cout << "ERROR: " << message;
+    std::cout << "ERROR: " << std::forward<T>(message);
     exit(10);
 }
 
 namespace details {
 
     template<class T>
-    static void check_internal(const T &message)
+    static void check_internal(T &&message)
     {
-        std::cout << message;
+        std::cout << std::forward<T>(message);
     }
 
-    template<class T, class... REST>
-    void check_internal(const T &message, const REST &...rest)
+    template<class T, class... TRest>
+    void check_internal(T &&message, TRest &&...rest)
     {
-        std::cout << message;
-        check_internal(rest...);
+        std::cout << std::forward<T>(message);
+        check_internal(std::forward<TRest>(rest)...);
     }
 
 } // namespace details
 
-template<class T, class... REST>
-void check(bool condition, const T &message, const REST &...rest)
+template<class T, class... TRest>
+void check(bool condition, T &&message, TRest &&...rest)
 {
     if (condition) return;
     std::cout << "ERROR: ";
-    details::check_internal(message, rest...);
+    details::check_internal(std::forward<T>(message), std::forward<TRest>(rest)...);
     exit(10);
 }
 
@@ -63,26 +63,43 @@ inline const char *vulkanErrorString(VkResult result)
     return iter->second;
 }
 
-template<class T, class PFN, class... PARAMS>
-std::vector<T> listVk(const PFN &pfn, const PARAMS &...params)
+/**
+ * Eliminate the need to call a Vulkan listing function twice to allocate a vector by hand.
+ * @tparam T Vulkan type to be stored
+ * @tparam TPfn Type of function to be called
+ * @tparam TParams Types of custom parameters
+ * @param pfn Vulkan listing function to be called
+ * @param params Params passed to the Vulkan function. Excludes the allocator, count and storing vector as parameters.
+ * @return Vector with stored Vulkan objects
+ */
+template<class T, class TPfn, class... TParams>
+std::vector<T> listVulkan(TPfn &&pfn, TParams &&...params)
 {
     uint32_t count;
-    (*pfn)(params..., &count, nullptr);
+    (*std::forward<TPfn>(pfn))(std::forward<TParams>(params)..., &count, nullptr);
     std::vector<T> vector{count};
-    (*pfn)(params..., &count, vector.data());
+    (*std::forward<TPfn>(pfn))(std::forward<TParams>(params)..., &count, vector.data());
     return std::move(vector);
 };
 
-template<class... Args>
-void checkVk(VkResult result, const std::string &message, const Args &...args)
+/**
+ * Check the result to be {@code VK_TRUE}, otherwise print the given error message
+ * together with the Vulkan error code string and exit the program.
+ * @tparam TParams Types of the message parameters
+ * @param result Vulkan result to be checked
+ * @param message Message to be printed
+ * @param params Message parameters to be printed
+ */
+template<class... TParams>
+void checkVk(VkResult result, const std::string &message, TParams &&...params)
 {
-    check(result == VK_SUCCESS, '[', vulkanErrorString(result), "] ", message, args...);
+    check(result == VK_SUCCESS, '[', vulkanErrorString(result), "] ", message, std::forward<TParams>(params)...);
 }
 
-template<class PFN_TYPE, class... Args>
-auto invokeVk(const std::string &name, VkInstance instance, const Args &...args)
+template<class TPfn, class... TParams>
+auto invokeVk(const std::string &name, VkInstance instance, TParams &&...params)
 {
-    auto func = reinterpret_cast<PFN_TYPE>(vkGetInstanceProcAddr(instance, name.c_str()));
+    auto func = reinterpret_cast<TPfn>(vkGetInstanceProcAddr(instance, name.c_str()));
     check(func != nullptr, "Cannot load Vulkan function ", name);
-    return func(instance, args...);
+    return func(instance, std::forward<TParams>(params)...);
 };

@@ -2,12 +2,11 @@
 
 int Application::sInstanceCount = 0;
 
-#pragma warning( push )
-#pragma warning( disable:4068 )
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
-Application::Application() {
+Application::Application()
+{
     // Create window:
     if (0 == sInstanceCount++) {
         glfwInit();
@@ -20,7 +19,7 @@ Application::Application() {
     {
         std::vector<bool> requestedAreAvailable;
         requestedAreAvailable.resize(mValidationLayers.size());
-        auto availableLayers = listVk<VkLayerProperties>(&vkEnumerateInstanceLayerProperties);
+        auto availableLayers = listVulkan<VkLayerProperties>(&vkEnumerateInstanceLayerProperties);
 
         // Check for available layers:
         for (auto &available : availableLayers) {
@@ -59,7 +58,8 @@ Application::Application() {
     fmt::print("Window creation completed\n");
 }
 
-void Application::createInstance() {
+void Application::createInstance()
+{
     VkInstanceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     info.enabledExtensionCount = static_cast<uint32_t>(mExtensions.size());
@@ -70,7 +70,8 @@ void Application::createInstance() {
     checkVk(vkCreateInstance(&info, nullptr, &mInstance), "Cannot create Vulkan instance");
 }
 
-void Application::setupDebugReport() {
+void Application::setupDebugReport()
+{
     VkDebugReportCallbackCreateInfoEXT info = {};
     info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     info.pfnCallback = &debugCallback;
@@ -80,17 +81,19 @@ void Application::setupDebugReport() {
                                                          &mDebugCallback), "Cannot create debug report callback");
 }
 
-void Application::createSurface() {
+void Application::createSurface()
+{
     glfwCreateWindowSurface(mInstance, mWindow, nullptr, &mSurface);
 }
 
-void Application::pickPhysicalDevice() {
-    auto physicalDevices = listVk<VkPhysicalDevice>(&vkEnumeratePhysicalDevices, mInstance);
+void Application::pickPhysicalDevice()
+{
+    auto physicalDevices = listVulkan<VkPhysicalDevice>(&vkEnumeratePhysicalDevices, mInstance);
 
     check(!physicalDevices.empty(), "No physical devices available");
 
     auto deviceIter = std::find_if(physicalDevices.begin(), physicalDevices.end(), [](auto &device) {
-        auto extensions = listVk<VkExtensionProperties>(&vkEnumerateDeviceExtensionProperties, device, nullptr);
+        auto extensions = listVulkan<VkExtensionProperties>(&vkEnumerateDeviceExtensionProperties, device, nullptr);
         return std::find_if(extensions.begin(), extensions.end(), [](const VkExtensionProperties &extension) {
             return !strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         }) != extensions.end();
@@ -101,11 +104,12 @@ void Application::pickPhysicalDevice() {
     mPhysicalDevice = *deviceIter;
 }
 
-void Application::createLogicalDevice() {
+void Application::createLogicalDevice()
+{
     // Get queue family index:
     {
-        auto queueFamilies = listVk<VkQueueFamilyProperties>(&vkGetPhysicalDeviceQueueFamilyProperties,
-                                                             mPhysicalDevice);
+        auto queueFamilies = listVulkan<VkQueueFamilyProperties>(&vkGetPhysicalDeviceQueueFamilyProperties,
+                                                                 mPhysicalDevice);
 
         // Find graphics queue:
         auto iter = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](auto &family) {
@@ -150,14 +154,16 @@ void Application::createLogicalDevice() {
     if (uniqueQueueFamilyIndices.size() == 1) {
         // Queues are the same
         mPresentQueue = mGraphicsQueue;
-    } else {
+    }
+    else {
         vkGetDeviceQueue(mDevice, mQueueFamilyIndices.present, 0, &mPresentQueue);
     }
 }
 
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
-Application::~Application() {
+Application::~Application()
+{
     vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
     invokeVk<PFN_vkDestroyDebugReportCallbackEXT>("vkDestroyDebugReportCallbackEXT", mInstance, mDebugCallback,
@@ -169,7 +175,8 @@ Application::~Application() {
     }
 }
 
-void Application::run() {
+void Application::run()
+{
     while (!glfwWindowShouldClose(mWindow)) {
         glfwPollEvents();
     }
@@ -177,7 +184,8 @@ void Application::run() {
 
 VkBool32
 Application::debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char *,
-                           const char *msg, void *) {
+        const char *msg, void *)
+{
     std::cout << "VK-DEBUG: " << msg << std::endl;
     return VK_FALSE;
 }
