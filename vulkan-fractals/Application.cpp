@@ -1,5 +1,8 @@
 #include "Application.h"
 
+const uint32_t Application::WINDOW_WIDTH = 800;
+const uint32_t Application::WINDOW_HEIGHT = 600;
+
 int Application::sInstanceCount = 0;
 
 #pragma clang diagnostic push
@@ -13,7 +16,7 @@ Application::Application()
     }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    mWindow = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+    mWindow = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan window", nullptr, nullptr);
 
     // Validation layers:
     {
@@ -44,10 +47,10 @@ Application::Application()
         const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
         for (uint32_t i = 0; i < glfwExtensionCount; i++) {
-            mExtensions.push_back(glfwExtensions[i]);
+            mInstanceExtensions.push_back(glfwExtensions[i]);
         }
 
-        mExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        mInstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
 
     createInstance();
@@ -55,6 +58,7 @@ Application::Application()
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
+    createSwapchain();
     fmt::print("Window creation completed\n");
 }
 
@@ -62,8 +66,8 @@ void Application::createInstance()
 {
     VkInstanceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    info.enabledExtensionCount = static_cast<uint32_t>(mExtensions.size());
-    info.ppEnabledExtensionNames = mExtensions.data();
+    info.enabledExtensionCount = static_cast<uint32_t>(mInstanceExtensions.size());
+    info.ppEnabledExtensionNames = mInstanceExtensions.data();
     info.enabledLayerCount = static_cast<uint32_t>(mValidationLayers.size());
     info.ppEnabledLayerNames = mValidationLayers.data();
 
@@ -89,17 +93,63 @@ void Application::createSurface()
 void Application::pickPhysicalDevice()
 {
     auto physicalDevices = listVulkan<VkPhysicalDevice>(&vkEnumeratePhysicalDevices, mInstance);
-
     check(!physicalDevices.empty(), "No physical devices available");
 
-    auto deviceIter = std::find_if(physicalDevices.begin(), physicalDevices.end(), [](auto &device) {
-        auto extensions = listVulkan<VkExtensionProperties>(&vkEnumerateDeviceExtensionProperties, device, nullptr);
-        return std::find_if(extensions.begin(), extensions.end(), [](const VkExtensionProperties &extension) {
-            return !strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-        }) != extensions.end();
+    auto deviceIter = std::find_if(physicalDevices.begin(), physicalDevices.end(), [this](auto &device) {
+
+        // Check for required extensions:
+        auto availableExtensions = listVulkan<VkExtensionProperties>(&vkEnumerateDeviceExtensionProperties, device,
+                                                                     nullptr);
+        if (std::find_if(mDeviceExtensions.begin(), mDeviceExtensions.end(),
+                         [&availableExtensions](const char *requiredExtension) {
+                             return std::find_if(availableExtensions.begin(), availableExtensions.end(),
+                                                 [&requiredExtension](const VkExtensionProperties &extension) {
+                                                     return !strcmp(extension.extensionName, requiredExtension);
+                                                 }) != availableExtensions.end();
+                         }) == mDeviceExtensions.end()) {
+            return false;
+        }
+
+        // Check for present modes and find best one:
+        auto presentModes = listVulkan<VkPresentModeKHR>(&vkGetPhysicalDeviceSurfacePresentModesKHR, device, mSurface);
+        if (presentModes.empty()) {
+            return false;
+        }
+        if (std::find_if(presentModes.begin(), presentModes.end(), [this](const auto &mode) {
+            if (VK_PRESENT_MODE_MAILBOX_KHR == mode) {
+                mSwapchainParams.presentMode = mode;
+                return true;
+            }
+            return false;
+        }) == presentModes.end()) {
+            mSwapchainParams.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        }
+
+        // Check for formats and find best one:
+        auto formats = listVulkan<VkSurfaceFormatKHR>(&vkGetPhysicalDeviceSurfaceFormatsKHR, device, mSurface);
+        if (formats.empty()) {
+            return false;
+        }
+        if (formats.size() == 1 && VK_FORMAT_UNDEFINED == formats[0].format) {
+            mSwapchainParams.surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+            mSwapchainParams.surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        }
+        else {
+            if (std::find_if(formats.begin(), formats.end(), [this](const auto &format) {
+                if (format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+                    format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    mSwapchainParams.surfaceFormat = format;
+                    return true;
+                }
+                return false;
+            }) == formats.end()) {
+                mSwapchainParams.surfaceFormat = formats[0];
+            }
+        }
+
+        return true;
     });
-    check(deviceIter != physicalDevices.end(), "Cannot find a physical device with swapchain support: ",
-          VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    check(deviceIter != physicalDevices.end(), "Cannot find a physical device with an adequate swapchain");
 
     mPhysicalDevice = *deviceIter;
 }
@@ -146,6 +196,8 @@ void Application::createLogicalDevice()
     info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     info.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
     info.pQueueCreateInfos = queueInfos.data();
+    info.enabledExtensionCount = static_cast<uint32_t>(mDeviceExtensions.size());
+    info.ppEnabledExtensionNames = mDeviceExtensions.data();
 
     checkVk(vkCreateDevice(mPhysicalDevice, &info, nullptr, &mDevice), "Cannot create logical device");
 
@@ -160,10 +212,64 @@ void Application::createLogicalDevice()
     }
 }
 
+void Application::createSwapchain()
+{
+    VkSurfaceCapabilitiesKHR caps = {};
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mPhysicalDevice, mSurface, &caps);
+
+    VkSwapchainCreateInfoKHR info = {};
+    info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    info.imageFormat = mSwapchainParams.surfaceFormat.format;
+    info.imageColorSpace = mSwapchainParams.surfaceFormat.colorSpace;
+    info.imageArrayLayers = 1;
+    info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    info.preTransform = caps.currentTransform;
+    info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    info.presentMode = mSwapchainParams.presentMode;
+    info.surface = mSurface;
+    info.clipped = VK_TRUE;
+    info.oldSwapchain = VK_NULL_HANDLE;
+
+    // Find best swap extent:
+    if (caps.currentExtent.width != std::numeric_limits<uint32_t>::max() ||
+        caps.currentExtent.height != std::numeric_limits<uint32_t>::max()) {
+        mSwapchainParams.extent = caps.currentExtent;
+    }
+    else {
+        mSwapchainParams.extent.width = clamp(WINDOW_WIDTH, caps.minImageExtent.width, caps.maxImageExtent.width);
+        mSwapchainParams.extent.height = clamp(WINDOW_HEIGHT, caps.minImageExtent.height, caps.maxImageExtent.height);
+    }
+    info.imageExtent = mSwapchainParams.extent;
+
+    // Set image count:
+    if (caps.maxImageCount == 0 || caps.maxImageCount > caps.minImageCount + 1) {
+        info.minImageCount = caps.minImageCount + 1;
+    }
+    else {
+        info.minImageCount = caps.minImageCount;
+    }
+
+    if (mQueueFamilyIndices.graphics == mQueueFamilyIndices.present) {
+        info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+    else {
+        info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        std::array<uint32_t, 2> indices{{mQueueFamilyIndices.graphics, mQueueFamilyIndices.present}};
+        info.queueFamilyIndexCount = indices.size();
+        info.pQueueFamilyIndices = indices.data();
+    }
+
+    checkVk(vkCreateSwapchainKHR(mDevice, &info, nullptr, &mSwapchain), "Cannot create swapchain");
+
+    // Get swapchain images:
+    mSwapchainImages = listVulkan<VkImage>(&vkGetSwapchainImagesKHR, mDevice, mSwapchain);
+}
+
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 Application::~Application()
 {
+    vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
     vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
     invokeVk<PFN_vkDestroyDebugReportCallbackEXT>("vkDestroyDebugReportCallbackEXT", mInstance, mDebugCallback,

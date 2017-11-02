@@ -18,40 +18,45 @@
 
 extern const std::array<std::pair<VkResult, const char *>, 18> VULKAN_ERROR_STRINGS;
 
-template<class T>
-void check(bool condition, T &&message)
-{
-    if (condition) return;
-    std::cout << "ERROR: " << std::forward<T>(message);
-    exit(10);
-}
-
 namespace details {
 
     template<class T>
-    static void check_internal(T &&message)
+    static void check(T &&message)
     {
         std::cout << std::forward<T>(message);
     }
 
     template<class T, class... TRest>
-    void check_internal(T &&message, TRest &&...rest)
+    void check(T &&message, TRest &&...rest)
     {
         std::cout << std::forward<T>(message);
-        check_internal(std::forward<TRest>(rest)...);
+        check(std::forward<TRest>(rest)...);
     }
 
 } // namespace details
 
+/**
+ * Checks that the given value evaluates to true, otherwise the given message is printed and a runtime exception is thrown
+ * @tparam T
+ * @tparam TRest
+ * @param condition
+ * @param message
+ * @param rest
+ */
 template<class T, class... TRest>
 void check(bool condition, T &&message, TRest &&...rest)
 {
-    if (condition) return;
+    if (condition) { return; }
     std::cout << "ERROR: ";
-    details::check_internal(std::forward<T>(message), std::forward<TRest>(rest)...);
-    exit(10);
+    details::check(std::forward<T>(message), std::forward<TRest>(rest)...);
+    throw std::runtime_error("check condition failed");
 }
 
+/**
+ * Return the given Vulkan error constant as a string
+ * @param result Vulkan error code
+ * @return String representation of error code
+ */
 inline const char *vulkanErrorString(VkResult result)
 {
     auto iter = std::find_if(std::begin(VULKAN_ERROR_STRINGS), std::end(VULKAN_ERROR_STRINGS), [&](const auto &map) {
@@ -84,7 +89,7 @@ std::vector<T> listVulkan(TPfn &&pfn, TParams &&...params)
 
 /**
  * Check the result to be {@code VK_TRUE}, otherwise print the given error message
- * together with the Vulkan error code string and exit the program.
+ * together with the Vulkan error code string and throws a runtime exception.
  * @tparam TParams Types of the message parameters
  * @param result Vulkan result to be checked
  * @param message Message to be printed
@@ -96,10 +101,53 @@ void checkVk(VkResult result, const std::string &message, TParams &&...params)
     check(result == VK_SUCCESS, '[', vulkanErrorString(result), "] ", message, std::forward<TParams>(params)...);
 }
 
+/**
+ * Clamps the given value between the given bounds, inclusively
+ * @tparam T Type of value
+ * @tparam TMin Type of minimum
+ * @tparam TMax Type of maximum
+ * @param value Value to clamped
+ * @param min Lower bound
+ * @param max Upper bound
+ * @return Clamped value
+ */
+template<class T, class TMin, class TMax>
+T clamp(T &&value, TMin &&min, TMax &&max)
+{
+    return std::max(std::min(std::forward<T>(static_cast<T>(max)), std::forward<T>(value)),
+                    std::forward<T>(static_cast<T>(min)));
+}
+
+/**
+ * Loads the given Vulkan instance-level function and calls it with the given parameters.
+ * @tparam TPfn Type of Vulkan function
+ * @tparam TParams Type of additional parameters
+ * @param name Name of Vulkan function
+ * @param instance Vulkan instance
+ * @param params Additional parameters
+ * @return Return value of Vulkan function or nothing if void function
+ */
 template<class TPfn, class... TParams>
 auto invokeVk(const std::string &name, VkInstance instance, TParams &&...params)
 {
     auto func = reinterpret_cast<TPfn>(vkGetInstanceProcAddr(instance, name.c_str()));
-    check(func != nullptr, "Cannot load Vulkan function ", name);
+    check(func != nullptr, "Cannot load Vulkan instance-leve- function ", name);
     return func(instance, std::forward<TParams>(params)...);
+};
+
+/**
+ * Loads the given Vulkan device-level function and calls it with the given parameters.
+ * @tparam TPfn Type of Vulkan function
+ * @tparam TParams Type of additional parameters
+ * @param name Name of Vulkan function
+ * @param device Vulkan logical device
+ * @param params Additional parameters
+ * @return Return value of Vulkan function or nothing if void function
+ */
+template<class TPfn, class... TParams>
+auto invokeVk(const std::string &name, VkDevice device, TParams &&...params)
+{
+    auto func = reinterpret_cast<TPfn>(vkGetDeviceProcAddr(device, name.c_str()));
+    check(func != nullptr, "Cannot load Vulkan device-level function ", name);
+    return func(device, std::forward<TParams>(params)...);
 };
