@@ -8,7 +8,7 @@ This project is divided into two sub projects:
 ## Build
 
 The console-fractals project is platform independant, but the vulkan project depends windows, currently.
-Just run the top-level `CmakeLists.txt` file.
+Just run the top-level `CMakeLists.txt` file.
 
 Tip: `cmake --build . ` builds the cmake project without explicitly using the build system.
 
