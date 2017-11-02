@@ -6,6 +6,8 @@
 #include <iterator>
 #include <array>
 #include <utility>
+#include <fstream>
+#include <cstddef>
 
 #include <vulkan/vulkan.h>
 
@@ -157,3 +159,5 @@ namespace details {
 } // namespace details
 
 #define invokeVk(name, ...) details::invokeVk<PFN_##name>(#name, __VA_ARGS__)
+
+std::vector<uint8_t> readRawFile(const std::string &filename);

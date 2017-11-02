@@ -60,6 +60,7 @@ Application::Application()
     createLogicalDevice();
     createSwapchain();
     createSwapchainViews();
+    createGraphicsPipeline();
 
     fmt::print("Window creation completed\n");
 }
@@ -291,10 +292,40 @@ void Application::createSwapchainViews()
     }
 }
 
+void Application::createGraphicsPipeline()
+{
+    // Create vertex shader:
+    {
+        auto vertShaderCode = readRawFile("shaders/quad.vert.spv");
+
+        VkShaderModuleCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        info.codeSize = vertShaderCode.size();
+        info.pCode = reinterpret_cast<const uint32_t *>(vertShaderCode.data());
+
+        checkVk(vkCreateShaderModule(mDevice, &info, nullptr, &mShaderModules[0]), "Cannot create vertex shader");
+    }
+
+    // Create fragment shader:
+    {
+        auto fragShaderCode = readRawFile("shaders/quad.frag.spv");
+
+        VkShaderModuleCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        info.codeSize = fragShaderCode.size();
+        info.pCode = reinterpret_cast<const uint32_t *>(fragShaderCode.data());
+
+        checkVk(vkCreateShaderModule(mDevice, &info, nullptr, &mShaderModules[1]), "Cannot create fragment shader");
+    }
+}
+
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 Application::~Application()
 {
+    for (auto &module : mShaderModules) {
+        vkDestroyShaderModule(mDevice, module, nullptr);
+    }
     for (auto &view : mSwapchainImageViews) {
         vkDestroyImageView(mDevice, view, nullptr);
     }
