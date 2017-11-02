@@ -37,4 +37,4 @@ build/
 **/cmake-build-debug/
 
 # Keep lib directories:
-!**/lib/*
+!*/lib-win32/*
