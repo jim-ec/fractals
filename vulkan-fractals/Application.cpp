@@ -7,8 +7,7 @@ int Application::sInstanceCount = 0;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
-Application::Application()
-{
+Application::Application() {
     // Create window:
     if (0 == sInstanceCount++) {
         glfwInit();
@@ -37,7 +36,7 @@ Application::Application()
         // Print unsupported layers:
         auto iter = std::find(requestedAreAvailable.begin(), requestedAreAvailable.end(), false);
         check(iter == requestedAreAvailable.end(), "Requested layer ",
-                mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
+              mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
     }
 
     // Extensions:
@@ -60,36 +59,32 @@ Application::Application()
     fmt::print("Window creation completed\n");
 }
 
-void Application::createInstance()
-{
+void Application::createInstance() {
     VkInstanceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    info.enabledExtensionCount = mExtensions.size();
+    info.enabledExtensionCount = static_cast<uint32_t>(mExtensions.size());
     info.ppEnabledExtensionNames = mExtensions.data();
-    info.enabledLayerCount = mValidationLayers.size();
+    info.enabledLayerCount = static_cast<uint32_t>(mValidationLayers.size());
     info.ppEnabledLayerNames = mValidationLayers.data();
 
     checkVk(vkCreateInstance(&info, nullptr, &mInstance), "Cannot create Vulkan instance");
 }
 
-void Application::setupDebugReport()
-{
+void Application::setupDebugReport() {
     VkDebugReportCallbackCreateInfoEXT info = {};
     info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     info.pfnCallback = &debugCallback;
     info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
     checkVk(invokeVk<PFN_vkCreateDebugReportCallbackEXT>("vkCreateDebugReportCallbackEXT", mInstance, &info, nullptr,
-            &mDebugCallback), "Cannot create debug report callback");
+                                                         &mDebugCallback), "Cannot create debug report callback");
 }
 
-void Application::createSurface()
-{
+void Application::createSurface() {
     glfwCreateWindowSurface(mInstance, mWindow, nullptr, &mSurface);
 }
 
-void Application::pickPhysicalDevice()
-{
+void Application::pickPhysicalDevice() {
     auto physicalDevices = listVk<VkPhysicalDevice>(&vkEnumeratePhysicalDevices, mInstance);
 
     check(!physicalDevices.empty(), "No physical devices available");
@@ -101,21 +96,19 @@ void Application::pickPhysicalDevice()
         }) != extensions.end();
     });
     check(deviceIter != physicalDevices.end(), "Cannot find a physical device with swapchain support: ",
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+          VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     mPhysicalDevice = *deviceIter;
 }
 
-void Application::createLogicalDevice()
-{
+void Application::createLogicalDevice() {
     // Get queue family index:
     {
         auto queueFamilies = listVk<VkQueueFamilyProperties>(&vkGetPhysicalDeviceQueueFamilyProperties,
-                mPhysicalDevice);
-        auto iter = queueFamilies.begin();
+                                                             mPhysicalDevice);
 
         // Find graphics queue:
-        iter = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](auto &family) {
+        auto iter = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](auto &family) {
             return family.queueFlags & VK_QUEUE_GRAPHICS_BIT;
         });
         check(iter != queueFamilies.end(), "Cannot find a graphics queue family");
@@ -147,7 +140,7 @@ void Application::createLogicalDevice()
 
     VkDeviceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    info.queueCreateInfoCount = queueInfos.size();
+    info.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
     info.pQueueCreateInfos = queueInfos.data();
 
     checkVk(vkCreateDevice(mPhysicalDevice, &info, nullptr, &mDevice), "Cannot create logical device");
@@ -164,12 +157,11 @@ void Application::createLogicalDevice()
 
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
-Application::~Application()
-{
+Application::~Application() {
     vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
     invokeVk<PFN_vkDestroyDebugReportCallbackEXT>("vkDestroyDebugReportCallbackEXT", mInstance, mDebugCallback,
-            nullptr);
+                                                  nullptr);
     vkDestroyInstance(mInstance, nullptr);
     glfwDestroyWindow(mWindow);
     if (0 == --sInstanceCount) {
@@ -177,8 +169,7 @@ Application::~Application()
     }
 }
 
-void Application::run()
-{
+void Application::run() {
     while (!glfwWindowShouldClose(mWindow)) {
         glfwPollEvents();
     }
@@ -186,8 +177,7 @@ void Application::run()
 
 VkBool32
 Application::debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char *,
-                           const char *msg, void *)
-{
+                           const char *msg, void *) {
     std::cout << "VK-DEBUG: " << msg << std::endl;
     return VK_FALSE;
 }

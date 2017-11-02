@@ -12,6 +12,14 @@ Just run the top-level `CMakeLists.txt` file.
 
 Tip: `cmake --build . ` builds the cmake project without explicitly using the build system.
 
+Under Fedora, you have to install the following packages:
+
+```shell
+sudo dnf groupinstall "X Software Development"
+sudo dnf install libXinerama-devel
+```
+
+
 ## console-fractals
 
 Contained inside the `console-fractals` directory.
