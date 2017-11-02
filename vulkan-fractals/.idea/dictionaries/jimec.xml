@@ -2,7 +2,9 @@
   <dictionary name="jimec">
     <words>
       <w>glfw</w>
+      <w>infos</w>
       <w>vulkan</w>
+      <w>wreturn</w>
     </words>
   </dictionary>
 </component>

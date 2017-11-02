@@ -54,20 +54,29 @@ void check(bool condition, const T &message, const REST &...rest)
 
 inline const char *vulkanErrorString(VkResult result)
 {
-    auto iter =  std::find_if(std::begin(VULKAN_ERROR_STRINGS), std::end(VULKAN_ERROR_STRINGS),
-            [&](const auto &map) {
-                return map.first == result;
-            });
-    if(iter == std::end(VULKAN_ERROR_STRINGS)) {
+    auto iter = std::find_if(std::begin(VULKAN_ERROR_STRINGS), std::end(VULKAN_ERROR_STRINGS), [&](const auto &map) {
+        return map.first == result;
+    });
+    if (iter == std::end(VULKAN_ERROR_STRINGS)) {
         return "unknown-error";
     }
     return iter->second;
 }
 
-template<class... Args>
-void checkVk(VkResult result, const Args &...args)
+template<class T, class PFN, class... PARAMS>
+std::vector<T> listVk(const PFN &pfn, const PARAMS &...params)
 {
-    check(result == VK_SUCCESS, '[', vulkanErrorString(result), "] ", args...);
+    uint32_t count;
+    (*pfn)(params..., &count, nullptr);
+    std::vector<T> vector{count};
+    (*pfn)(params..., &count, vector.data());
+    return std::move(vector);
+};
+
+template<class... Args>
+void checkVk(VkResult result, const std::string &message, const Args &...args)
+{
+    check(result == VK_SUCCESS, '[', vulkanErrorString(result), "] ", message, args...);
 }
 
 template<class PFN_TYPE, class... Args>

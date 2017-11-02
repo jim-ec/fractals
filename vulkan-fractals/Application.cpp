@@ -2,6 +2,11 @@
 
 int Application::sInstanceCount = 0;
 
+#pragma warning( push )
+#pragma warning( disable:4068 )
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-stack-address"
+
 Application::Application()
 {
     // Create window:
@@ -16,11 +21,7 @@ Application::Application()
     {
         std::vector<bool> requestedAreAvailable;
         requestedAreAvailable.resize(mValidationLayers.size());
-
-        uint32_t count;
-        vkEnumerateInstanceLayerProperties(&count, nullptr);
-        std::vector<VkLayerProperties> availableLayers{count};
-        vkEnumerateInstanceLayerProperties(&count, availableLayers.data());
+        auto availableLayers = listVk<VkLayerProperties>(&vkEnumerateInstanceLayerProperties);
 
         // Check for available layers:
         for (auto &available : availableLayers) {
@@ -34,9 +35,9 @@ Application::Application()
         }
 
         // Print unsupported layers:
-        for (size_t i = 0; i < requestedAreAvailable.size(); i++) {
-            check(requestedAreAvailable[i], "Requested layer ", mValidationLayers[i], " is not available");
-        }
+        auto iter = std::find(requestedAreAvailable.begin(), requestedAreAvailable.end(), false);
+        check(iter == requestedAreAvailable.end(), "Requested layer ",
+                mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
     }
 
     // Extensions:
@@ -51,46 +52,122 @@ Application::Application()
         mExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
 
-    // Create instance
+    createInstance();
+    setupDebugReport();
+    createSurface();
+    pickPhysicalDevice();
+    createLogicalDevice();
+    fmt::print("Window creation completed\n");
+}
+
+void Application::createInstance()
+{
+    VkInstanceCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    info.enabledExtensionCount = mExtensions.size();
+    info.ppEnabledExtensionNames = mExtensions.data();
+    info.enabledLayerCount = mValidationLayers.size();
+    info.ppEnabledLayerNames = mValidationLayers.data();
+
+    checkVk(vkCreateInstance(&info, nullptr, &mInstance), "Cannot create Vulkan instance");
+}
+
+void Application::setupDebugReport()
+{
+    VkDebugReportCallbackCreateInfoEXT info = {};
+    info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    info.pfnCallback = &debugCallback;
+    info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+
+    checkVk(invokeVk<PFN_vkCreateDebugReportCallbackEXT>("vkCreateDebugReportCallbackEXT", mInstance, &info, nullptr,
+            &mDebugCallback), "Cannot create debug report callback");
+}
+
+void Application::createSurface()
+{
+    glfwCreateWindowSurface(mInstance, mWindow, nullptr, &mSurface);
+}
+
+void Application::pickPhysicalDevice()
+{
+    auto physicalDevices = listVk<VkPhysicalDevice>(&vkEnumeratePhysicalDevices, mInstance);
+
+    check(!physicalDevices.empty(), "No physical devices available");
+
+    auto deviceIter = std::find_if(physicalDevices.begin(), physicalDevices.end(), [](auto &device) {
+        auto extensions = listVk<VkExtensionProperties>(&vkEnumerateDeviceExtensionProperties, device, nullptr);
+        return std::find_if(extensions.begin(), extensions.end(), [](const VkExtensionProperties &extension) {
+            return !strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        }) != extensions.end();
+    });
+    check(deviceIter != physicalDevices.end(), "Cannot find a physical device with swapchain support: ",
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    mPhysicalDevice = *deviceIter;
+}
+
+void Application::createLogicalDevice()
+{
+    // Get queue family index:
     {
+        auto queueFamilies = listVk<VkQueueFamilyProperties>(&vkGetPhysicalDeviceQueueFamilyProperties,
+                mPhysicalDevice);
+        auto iter = queueFamilies.begin();
 
-        VkInstanceCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        info.enabledExtensionCount = mExtensions.size();
-        info.ppEnabledExtensionNames = mExtensions.data();
-        info.enabledLayerCount = mValidationLayers.size();
-        info.ppEnabledLayerNames = mValidationLayers.data();
+        // Find graphics queue:
+        iter = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](auto &family) {
+            return family.queueFlags & VK_QUEUE_GRAPHICS_BIT;
+        });
+        check(iter != queueFamilies.end(), "Cannot find a graphics queue family");
+        mQueueFamilyIndices.graphics = static_cast<uint32_t>(std::distance(queueFamilies.begin(), iter));
 
-        checkVk(vkCreateInstance(&info, nullptr, &mInstance), "Cannot create Vulkan instance");
+        // Find present queue:
+        iter = std::find_if(queueFamilies.begin(), queueFamilies.end(), [this, i = 0u](auto &family) mutable {
+            VkBool32 supported = VK_FALSE;
+            vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, i, mSurface, &supported);
+            return VK_TRUE == supported;
+        });
+        check(iter != queueFamilies.end(), "Cannot find a present queue family");
+        mQueueFamilyIndices.present = static_cast<uint32_t>(std::distance(queueFamilies.begin(), iter));
     }
 
-    // Create debug report:
-    {
-        VkDebugReportCallbackCreateInfoEXT info = {};
-        info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        info.pfnCallback = &debugCallback;
-        info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    float queuePriorities[] = {1.0};
 
-        checkVk(invokeVk<PFN_vkCreateDebugReportCallbackEXT>("vkCreateDebugReportCallbackEXT", mInstance, &info,
-                nullptr, &mDebugCallback), "Cannot create debug report callback");
+    std::set<uint32_t> uniqueQueueFamilyIndices{mQueueFamilyIndices.graphics, mQueueFamilyIndices.present};
+    std::vector<VkDeviceQueueCreateInfo> queueInfos;
+
+    for (auto &uniqueQueueFamilyIndex : uniqueQueueFamilyIndices) {
+        VkDeviceQueueCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        info.queueCount = 1;
+        info.pQueuePriorities = queuePriorities;
+        info.queueFamilyIndex = uniqueQueueFamilyIndex;
+        queueInfos.push_back(info);
     }
 
-    // Get physical device:
-    {
-        uint32_t count;
-        vkEnumeratePhysicalDevices(mInstance, &count, nullptr);
-        std::vector<VkPhysicalDevice> physicalDevices{count};
-        vkEnumeratePhysicalDevices(mInstance, &count, physicalDevices.data());
+    VkDeviceCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    info.queueCreateInfoCount = queueInfos.size();
+    info.pQueueCreateInfos = queueInfos.data();
 
-        check(!physicalDevices.empty(), "No physical devices available");
+    checkVk(vkCreateDevice(mPhysicalDevice, &info, nullptr, &mDevice), "Cannot create logical device");
 
-        VkDeviceCreateInfo deviceInfo = {};
-        deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    // Get queues:
+    vkGetDeviceQueue(mDevice, mQueueFamilyIndices.graphics, 0, &mGraphicsQueue);
+    if (uniqueQueueFamilyIndices.size() == 1) {
+        // Queues are the same
+        mPresentQueue = mGraphicsQueue;
+    } else {
+        vkGetDeviceQueue(mDevice, mQueueFamilyIndices.present, 0, &mPresentQueue);
     }
 }
 
+#pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
+
 Application::~Application()
 {
+    vkDestroyDevice(mDevice, nullptr);
+    vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
     invokeVk<PFN_vkDestroyDebugReportCallbackEXT>("vkDestroyDebugReportCallbackEXT", mInstance, mDebugCallback,
             nullptr);
     vkDestroyInstance(mInstance, nullptr);
