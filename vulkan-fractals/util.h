@@ -118,36 +118,42 @@ T clamp(T &&value, TMin &&min, TMax &&max)
                     std::forward<T>(static_cast<T>(min)));
 }
 
-/**
- * Loads the given Vulkan instance-level function and calls it with the given parameters.
- * @tparam TPfn Type of Vulkan function
- * @tparam TParams Type of additional parameters
- * @param name Name of Vulkan function
- * @param instance Vulkan instance
- * @param params Additional parameters
- * @return Return value of Vulkan function or nothing if void function
- */
-template<class TPfn, class... TParams>
-auto invokeVk(const std::string &name, VkInstance instance, TParams &&...params)
-{
-    auto func = reinterpret_cast<TPfn>(vkGetInstanceProcAddr(instance, name.c_str()));
-    check(func != nullptr, "Cannot load Vulkan instance-leve- function ", name);
-    return func(instance, std::forward<TParams>(params)...);
-};
+namespace details {
 
-/**
- * Loads the given Vulkan device-level function and calls it with the given parameters.
- * @tparam TPfn Type of Vulkan function
- * @tparam TParams Type of additional parameters
- * @param name Name of Vulkan function
- * @param device Vulkan logical device
- * @param params Additional parameters
- * @return Return value of Vulkan function or nothing if void function
- */
-template<class TPfn, class... TParams>
-auto invokeVk(const std::string &name, VkDevice device, TParams &&...params)
-{
-    auto func = reinterpret_cast<TPfn>(vkGetDeviceProcAddr(device, name.c_str()));
-    check(func != nullptr, "Cannot load Vulkan device-level function ", name);
-    return func(device, std::forward<TParams>(params)...);
-};
+    /**
+     * Loads the given Vulkan instance-level function and calls it with the given parameters.
+     * @tparam TPfn Type of Vulkan function
+     * @tparam TParams Type of additional parameters
+     * @param name Name of Vulkan function
+     * @param instance Vulkan instance
+     * @param params Additional parameters
+     * @return Return value of Vulkan function or nothing if void function
+     */
+    template<class TPfn, class... TParams>
+    auto invokeVk(const std::string &name, VkInstance instance, TParams &&...params)
+    {
+        auto func = reinterpret_cast<TPfn>(vkGetInstanceProcAddr(instance, name.c_str()));
+        ::check(func != nullptr, "Cannot load Vulkan instance-level function ", name);
+        return func(instance, std::forward<TParams>(params)...);
+    };
+
+    /**
+     * Loads the given Vulkan device-level function and calls it with the given parameters.
+     * @tparam TPfn Type of Vulkan function
+     * @tparam TParams Type of additional parameters
+     * @param name Name of Vulkan function
+     * @param device Vulkan logical device
+     * @param params Additional parameters
+     * @return Return value of Vulkan function or nothing if void function
+     */
+    template<class TPfn, class... TParams>
+    auto invokeVk(const std::string &name, VkDevice device, TParams &&...params)
+    {
+        auto func = reinterpret_cast<TPfn>(vkGetDeviceProcAddr(device, name.c_str()));
+        ::check(func != nullptr, "Cannot load Vulkan device-level function ", name);
+        return func(device, std::forward<TParams>(params)...);
+    };
+
+} // namespace details
+
+#define invokeVk(name, ...) details::invokeVk<PFN_##name>(#name, __VA_ARGS__)

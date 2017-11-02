@@ -46,6 +46,7 @@ private:
     VkQueue mPresentQueue;
     VkSwapchainKHR mSwapchain;
     std::vector<VkImage> mSwapchainImages;
+    std::vector<VkImageView> mSwapchainImageViews;
 
     struct
     {
@@ -71,6 +72,8 @@ private:
     void createLogicalDevice();
 
     void createSwapchain();
+
+    void createSwapchainViews();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location,

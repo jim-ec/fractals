@@ -59,6 +59,8 @@ Application::Application()
     pickPhysicalDevice();
     createLogicalDevice();
     createSwapchain();
+    createSwapchainViews();
+
     fmt::print("Window creation completed\n");
 }
 
@@ -81,8 +83,8 @@ void Application::setupDebugReport()
     info.pfnCallback = &debugCallback;
     info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
-    checkVk(invokeVk<PFN_vkCreateDebugReportCallbackEXT>("vkCreateDebugReportCallbackEXT", mInstance, &info, nullptr,
-                                                         &mDebugCallback), "Cannot create debug report callback");
+    checkVk(invokeVk(vkCreateDebugReportCallbackEXT, mInstance, &info, nullptr, &mDebugCallback),
+            "Cannot create debug report callback");
 }
 
 void Application::createSurface()
@@ -265,15 +267,41 @@ void Application::createSwapchain()
     mSwapchainImages = listVulkan<VkImage>(&vkGetSwapchainImagesKHR, mDevice, mSwapchain);
 }
 
+void Application::createSwapchainViews()
+{
+    mSwapchainImageViews.resize(mSwapchainImages.size());
+
+    for (size_t i = 0; i < mSwapchainImages.size(); i++) {
+        VkImageViewCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        info.format = mSwapchainParams.surfaceFormat.format;
+        info.image = mSwapchainImages[i];
+        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        info.subresourceRange.baseArrayLayer = 0;
+        info.subresourceRange.layerCount = 1;
+        info.subresourceRange.baseMipLevel = 0;
+        info.subresourceRange.levelCount = 1;
+
+        checkVk(vkCreateImageView(mDevice, &info, nullptr, &mSwapchainImageViews[i]), "Cannot create an image view");
+    }
+}
+
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 Application::~Application()
 {
+    for (auto &view : mSwapchainImageViews) {
+        vkDestroyImageView(mDevice, view, nullptr);
+    }
     vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
     vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
-    invokeVk<PFN_vkDestroyDebugReportCallbackEXT>("vkDestroyDebugReportCallbackEXT", mInstance, mDebugCallback,
-                                                  nullptr);
+    invokeVk(vkDestroyDebugReportCallbackEXT, mInstance, mDebugCallback, nullptr);
     vkDestroyInstance(mInstance, nullptr);
     glfwDestroyWindow(mWindow);
     if (0 == --sInstanceCount) {
