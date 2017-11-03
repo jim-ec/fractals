@@ -352,7 +352,7 @@ void Application::createGraphicsPipeline()
 
     // Create fragment shader:
     {
-        auto fragShaderCode = readRawFile("shaders/quad.frag.spv");
+        auto fragShaderCode = readRawFile("shaders/mandelbrot.frag.spv");
 
         VkShaderModuleCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -529,7 +529,7 @@ void Application::setupCommands()
         }
 
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
-        vkCmdDraw(buffer, 3, 1, 0, 0);
+        vkCmdDraw(buffer, 6, 1, 0, 0);
         vkCmdEndRenderPass(buffer);
         checkVk(vkEndCommandBuffer(buffer), "Cannot record command buffer");
     }
