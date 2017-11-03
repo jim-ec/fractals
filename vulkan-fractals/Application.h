@@ -3,6 +3,8 @@
 #include <string>
 #include <set>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 #define GLFW_INCLUDE_VULKAN
 
@@ -35,8 +37,12 @@ private:
     static int sInstanceCount;
     static const uint32_t WINDOW_WIDTH;
     static const uint32_t WINDOW_HEIGHT;
+    static const int FPS;
+    static const std::chrono::milliseconds RENDER_MILLIS;
 
     GLFWwindow *mWindow;
+    std::chrono::system_clock::time_point mNextRender;
+
     std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation", /*"VK_LAYER_RENDERDOC_Capture"*/ }};
     std::vector<const char *> mInstanceExtensions{{VK_EXT_DEBUG_REPORT_EXTENSION_NAME}};
     std::vector<const char *> mDeviceExtensions{{VK_KHR_SWAPCHAIN_EXTENSION_NAME}};
@@ -99,6 +105,8 @@ private:
     void createVertexBuffer();
 
     void createCommandBuffers();
+
+    void draw();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags,

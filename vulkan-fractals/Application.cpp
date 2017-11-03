@@ -2,6 +2,8 @@
 
 const uint32_t Application::WINDOW_WIDTH = 800;
 const uint32_t Application::WINDOW_HEIGHT = 600;
+const int Application::FPS = 40;
+const std::chrono::milliseconds Application::RENDER_MILLIS{1000 / FPS};
 
 int Application::sInstanceCount = 0;
 
@@ -479,47 +481,67 @@ Application::~Application()
 
 void Application::run()
 {
+    mNextRender = std::chrono::system_clock::now();
+
     while (!glfwWindowShouldClose(mWindow)) {
         glfwPollEvents();
 
-        vkQueueWaitIdle(mPresentQueue);
+        draw();
 
-        uint32_t imageIndex;
-        vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(), mImageAvailableSemaphore,
-                              VK_NULL_HANDLE, &imageIndex);
+        // Wait if rendering was too fast:
+        auto now = std::chrono::system_clock::now();
+        mNextRender += RENDER_MILLIS;
+        auto waitMillis = std::chrono::duration_cast<std::chrono::milliseconds>(mNextRender - now);
 
-        VkCommandBuffer *commandBuffer = &mCommandBuffers[imageIndex];
-
-        {
-            VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-
-            VkSubmitInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            info.commandBufferCount = 1;
-            info.pCommandBuffers = commandBuffer;
-            info.waitSemaphoreCount = 1;
-            info.pWaitSemaphores = &mImageAvailableSemaphore;
-            info.pWaitDstStageMask = waitStages;
-            info.signalSemaphoreCount = 1;
-            info.pSignalSemaphores = &mRenderFinishedSemaphore;
-
-            checkVk(vkQueueSubmit(mGraphicsQueue, 1, &info, VK_NULL_HANDLE), "Cannot submit queue");
+        if (waitMillis.count() < 0) {
+            fmt::printf("Rendering took longer than specified max fps (%dms)\n", FPS);
+            mNextRender = now;
         }
-
-        {
-            VkPresentInfoKHR info = {};
-            info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-            info.waitSemaphoreCount = 1;
-            info.pWaitSemaphores = &mRenderFinishedSemaphore;
-            info.swapchainCount = 1;
-            info.pSwapchains = &mSwapchain;
-            info.pImageIndices = &imageIndex;
-
-            checkVk(vkQueuePresentKHR(mPresentQueue, &info), "Cannot present on swapchain");
+        else {
+            std::this_thread::sleep_for(waitMillis);
         }
     }
 
     vkDeviceWaitIdle(mDevice);
+}
+
+void Application::draw()
+{
+    vkQueueWaitIdle(mPresentQueue);
+
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(), mImageAvailableSemaphore,
+                          VK_NULL_HANDLE, &imageIndex);
+
+    VkCommandBuffer *commandBuffer = &mCommandBuffers[imageIndex];
+
+    {
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+        VkSubmitInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.commandBufferCount = 1;
+        info.pCommandBuffers = commandBuffer;
+        info.waitSemaphoreCount = 1;
+        info.pWaitSemaphores = &mImageAvailableSemaphore;
+        info.pWaitDstStageMask = waitStages;
+        info.signalSemaphoreCount = 1;
+        info.pSignalSemaphores = &mRenderFinishedSemaphore;
+
+        checkVk(vkQueueSubmit(mGraphicsQueue, 1, &info, VK_NULL_HANDLE), "Cannot submit queue");
+    }
+
+    {
+        VkPresentInfoKHR info = {};
+        info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        info.waitSemaphoreCount = 1;
+        info.pWaitSemaphores = &mRenderFinishedSemaphore;
+        info.swapchainCount = 1;
+        info.pSwapchains = &mSwapchain;
+        info.pImageIndices = &imageIndex;
+
+        checkVk(vkQueuePresentKHR(mPresentQueue, &info), "Cannot present on swapchain");
+    }
 }
 
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
