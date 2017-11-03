@@ -10,7 +10,9 @@ out gl_PerVertex {
 };
 
 void main() {
-    vPosition = inPosition * 2;
+    vPosition = inPosition * 1.5;
+    vPosition.x -= 0.5;
     vPosition.x *= 800.0 / 600.0;
+
     gl_Position = vec4(inPosition, 0.0, 1.0);
 }
