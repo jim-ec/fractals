@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Fractals.iml" filepath="$PROJECT_DIR$/.idea/Fractals.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/console-fractals.iml" filepath="$PROJECT_DIR$/.idea/console-fractals.iml" />
     </modules>
   </component>
 </project>

@@ -15,7 +15,7 @@ public:
 	inline Dimension(T&&... args)
 		: width{ x }
 		, height{ y }
-		, glm::ivec2{ args... }
+		, glm::ivec2{ std::forward<T>(args)... }
 	{
 	}
 
