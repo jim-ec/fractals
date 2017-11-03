@@ -9,6 +9,7 @@ int Application::sInstanceCount = 0;
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
 Application::Application()
+        : mVertexBuffer{mPhysicalDevice, mDevice}
 {
     // Create window:
     if (0 == sInstanceCount++) {
@@ -485,42 +486,8 @@ void Application::createFramebuffers()
 
 void Application::createVertexBuffer()
 {
-    {
-        std::array<uint32_t, 1> families = {mQueueFamilyIndices.graphics};
-
-        VkBufferCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        info.size = mVertices.size() * sizeof(Vertex);
-
-        checkVk(vkCreateBuffer(mDevice, &info, nullptr, &mVertexBuffer), "Cannot create vertex buffer");
-    }
-    {
-        VkMemoryRequirements req = {};
-        vkGetBufferMemoryRequirements(mDevice, mVertexBuffer, &req);
-
-        auto memoryTypeIndex = findMemoryType(req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        VkMemoryAllocateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        info.allocationSize = req.size;
-        info.memoryTypeIndex = memoryTypeIndex;
-
-        checkVk(vkAllocateMemory(mDevice, &info, nullptr, &mVertexBufferMemory),
-                "Cannot allocate vertex buffer memory");
-
-        vkBindBufferMemory(mDevice, mVertexBuffer, mVertexBufferMemory, 0);
-    }
-    {
-        VkDeviceSize size = mVertices.size() * sizeof(Vertex);
-
-        void *data;
-        vkMapMemory(mDevice, mVertexBufferMemory, 0, size, 0, &data);
-        memcpy(data, mVertices.data(), size);
-        vkUnmapMemory(mDevice, mVertexBufferMemory);
-    }
+    mVertexBuffer.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, byteSize(mVertices),
+                       mVertices.data());
 }
 
 void Application::setupCommands()
@@ -578,7 +545,7 @@ void Application::setupCommands()
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
         {
-            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer};
+            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer.getBufferHandle()};
             std::array<VkDeviceSize, 1> offsets = {0};
 
             vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers.data(), offsets.data());
@@ -601,8 +568,6 @@ void Application::setupCommands()
 
 Application::~Application()
 {
-    vkFreeMemory(mDevice, mVertexBufferMemory, nullptr);
-    vkDestroyBuffer(mDevice, mVertexBuffer, nullptr);
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
@@ -676,24 +641,15 @@ void Application::run()
 
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
-VkBool32
-Application::debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char *,
-        const char *msg, void *)
+VkBool32 Application::debugCallback(VkDebugReportFlagsEXT,
+        VkDebugReportObjectTypeEXT,
+        uint64_t,
+        size_t,
+        int32_t,
+        const char *,
+        const char *msg,
+        void *)
 {
     std::cout << "VK-DEBUG: " << msg << std::endl;
     return VK_FALSE;
-}
-
-uint32_t Application::findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties)
-{
-    VkPhysicalDeviceMemoryProperties memProps = {};
-    vkGetPhysicalDeviceMemoryProperties(mPhysicalDevice, &memProps);
-
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
-        if (filter & (1 << i) && (memProps.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    check(false, "Cannot find suitable memory type");
 }

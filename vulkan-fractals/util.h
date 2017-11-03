@@ -161,3 +161,16 @@ namespace details {
 #define invokeVk(name, ...) details::invokeVk<PFN_##name>(#name, __VA_ARGS__)
 
 std::vector<uint8_t> readRawFile(const std::string &filename);
+
+/**
+ * Memory size of container in bytes.
+ * Assumes the container to provide its value type and a {@code size()} method.
+ * @tparam T Type of container
+ * @param container Container to be queried
+ * @return Size of container in bytes
+ */
+template<class T>
+auto byteSize(const T &container)
+{
+    return container.size() * sizeof(typename T::value_type);
+}
