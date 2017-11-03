@@ -1,12 +1,12 @@
-#include "Buffer.h"
+#include "BareBuffer.h"
 
-Buffer::Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device)
+BareBuffer::BareBuffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device)
         : mDevice{device}
           , mPhysicalDevice{physicalDevice}
 {
 }
 
-void Buffer::init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, VkDeviceSize size, void *srcData)
+void BareBuffer::init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, VkDeviceSize size, void *srcData)
 {
     mSize = size;
 
@@ -47,13 +47,13 @@ void Buffer::init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, Vk
     }
 }
 
-void Buffer::destroy()
+void BareBuffer::destroy()
 {
     vkFreeMemory(mDevice, mMemory, nullptr);
     vkDestroyBuffer(mDevice, mBuffer, nullptr);
 }
 
-uint32_t Buffer::findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties)
+uint32_t BareBuffer::findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProps = {};
     vkGetPhysicalDeviceMemoryProperties(mPhysicalDevice, &memProps);
@@ -67,12 +67,12 @@ uint32_t Buffer::findMemoryType(uint32_t filter, VkMemoryPropertyFlags propertie
     check(false, "Cannot find suitable memory type");
 }
 
-const VkBuffer &Buffer::getBufferHandle() const
+const VkBuffer &BareBuffer::getBufferHandle() const
 {
     return mBuffer;
 }
 
-const VkDeviceMemory &Buffer::getMemoryHandle() const
+const VkDeviceMemory &BareBuffer::getMemoryHandle() const
 {
     return mMemory;
 }
@@ -80,7 +80,7 @@ const VkDeviceMemory &Buffer::getMemoryHandle() const
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
-void Buffer::copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size)
+void BareBuffer::copyTo(BareBuffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size)
 {
     if (size == 0) {
         size = mSize;

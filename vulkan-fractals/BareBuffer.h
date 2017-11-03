@@ -5,7 +5,7 @@
 
 #include "util.h"
 
-class Buffer
+class BareBuffer
 {
 
 private:
@@ -18,13 +18,13 @@ private:
 
 public:
 
-    Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device);
+    BareBuffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device);
 
     void destroy();
 
     void init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, VkDeviceSize size, void *srcData);
 
-    void copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size = 0);
+    void copyTo(BareBuffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size = 0);
 
     const VkBuffer &getBufferHandle() const;
 

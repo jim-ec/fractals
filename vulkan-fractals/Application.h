@@ -15,7 +15,7 @@
 
 #include "Vertex.h"
 #include "util.h"
-#include "Buffer.h"
+#include "StagingBuffer.h"
 
 #pragma once
 
@@ -54,7 +54,7 @@ private:
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
-    Buffer mStagingVertexBuffer, mVertexBuffer;
+    StagingBuffer mVertexBuffer;
     VkCommandPool mCommandPool;
     std::vector<VkCommandBuffer> mCommandBuffers;
     VkSemaphore mImageAvailableSemaphore;

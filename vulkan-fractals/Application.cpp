@@ -9,8 +9,7 @@ int Application::sInstanceCount = 0;
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
 Application::Application()
-        : mStagingVertexBuffer{mPhysicalDevice, mDevice}
-          , mVertexBuffer{mPhysicalDevice, mDevice}
+        : mVertexBuffer{mPhysicalDevice, mDevice}
 {
     // Create window:
     if (0 == sInstanceCount++) {
@@ -487,14 +486,9 @@ void Application::createFramebuffers()
 
 void Application::createVertexBuffer()
 {
-    mStagingVertexBuffer.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT, byteSize(mVertices), mVertices.data());
-
-    mVertexBuffer.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, byteSize(mVertices),
-                       nullptr);
-
-    mStagingVertexBuffer.copyTo(mVertexBuffer, mCommandPool, mGraphicsQueue);
+    mVertexBuffer.init(mVertices.data(), byteSize(mVertices),
+                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, mCommandPool,
+                       mGraphicsQueue);
 }
 
 void Application::createCommandPool()
@@ -552,7 +546,7 @@ void Application::createCommandBuffers()
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
         {
-            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer.getBufferHandle()};
+            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer.getDeviceBufferHandle()};
             std::array<VkDeviceSize, 1> offsets = {0};
 
             vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers.data(), offsets.data());
@@ -576,7 +570,6 @@ void Application::createCommandBuffers()
 Application::~Application()
 {
     mVertexBuffer.destroy();
-    mStagingVertexBuffer.destroy();
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
