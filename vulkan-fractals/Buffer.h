@@ -12,16 +12,19 @@ private:
 
     const VkPhysicalDevice &mPhysicalDevice;
     const VkDevice &mDevice;
-    VkBuffer mBuffer;
-    VkDeviceMemory mMemory;
+    VkBuffer mBuffer = 0;
+    VkDeviceMemory mMemory = 0;
+    VkDeviceSize mSize = 0;
 
 public:
 
     Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device);
 
-    ~Buffer();
+    void destroy();
 
-    void init(VkMemoryPropertyFlags properties, VkDeviceSize size, void *srcData);
+    void init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, VkDeviceSize size, void *srcData);
+
+    void copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size = 0);
 
     const VkBuffer &getBufferHandle() const;
 

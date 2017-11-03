@@ -9,7 +9,8 @@ int Application::sInstanceCount = 0;
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
 Application::Application()
-        : mVertexBuffer{mPhysicalDevice, mDevice}
+        : mStagingVertexBuffer{mPhysicalDevice, mDevice}
+          , mVertexBuffer{mPhysicalDevice, mDevice}
 {
     // Create window:
     if (0 == sInstanceCount++) {
@@ -64,8 +65,9 @@ Application::Application()
     createRenderPass();
     createGraphicsPipeline();
     createFramebuffers();
+    createCommandPool();
     createVertexBuffer();
-    setupCommands();
+    createCommandBuffers();
 
     fmt::print("Window creation completed\n");
 }
@@ -483,24 +485,29 @@ void Application::createFramebuffers()
     }
 }
 
-
 void Application::createVertexBuffer()
 {
-    mVertexBuffer.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, byteSize(mVertices),
-                       mVertices.data());
+    mStagingVertexBuffer.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT, byteSize(mVertices), mVertices.data());
+
+    mVertexBuffer.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, byteSize(mVertices),
+                       nullptr);
+
+    mStagingVertexBuffer.copyTo(mVertexBuffer, mCommandPool, mGraphicsQueue);
 }
 
-void Application::setupCommands()
+void Application::createCommandPool()
 {
-    // Create command pool:
-    {
-        VkCommandPoolCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        info.queueFamilyIndex = mQueueFamilyIndices.graphics;
+    VkCommandPoolCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    info.queueFamilyIndex = mQueueFamilyIndices.graphics;
 
-        checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
-    }
+    checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
+}
 
+void Application::createCommandBuffers()
+{
     // Allocate command buffers:
     mCommandBuffers.resize(mSwapchainFramebuffers.size());
     {
@@ -568,6 +575,8 @@ void Application::setupCommands()
 
 Application::~Application()
 {
+    mVertexBuffer.destroy();
+    mStagingVertexBuffer.destroy();
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
@@ -650,6 +659,6 @@ VkBool32 Application::debugCallback(VkDebugReportFlagsEXT,
         const char *msg,
         void *)
 {
-    std::cout << "VK-DEBUG: " << msg << std::endl;
+    throw std::runtime_error{msg};
     return VK_FALSE;
 }

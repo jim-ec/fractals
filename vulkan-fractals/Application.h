@@ -54,7 +54,7 @@ private:
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
-    Buffer mVertexBuffer;
+    Buffer mStagingVertexBuffer, mVertexBuffer;
     VkCommandPool mCommandPool;
     std::vector<VkCommandBuffer> mCommandBuffers;
     VkSemaphore mImageAvailableSemaphore;
@@ -97,10 +97,11 @@ private:
 
     void createVertexBuffer();
 
-    void setupCommands();
+    void createCommandBuffers();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location,
             int32_t code, const char *layerPrefix, const char *msg, void *userData);
 
+    void createCommandPool();
 };
