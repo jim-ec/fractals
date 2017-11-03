@@ -16,6 +16,7 @@
 #include "Vertex.h"
 #include "util.h"
 #include "StagingBuffer.h"
+#include "Pipeline.h"
 
 #pragma once
 
@@ -50,9 +51,7 @@ private:
     std::vector<VkImage> mSwapchainImages;
     std::vector<VkImageView> mSwapchainImageViews;
     VkRenderPass mRenderPass;
-    std::array<VkShaderModule, 2> mShaderModules;
-    VkPipelineLayout mPipelineLayout;
-    VkPipeline mPipeline;
+    Pipeline mPipeline;
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
     StagingBuffer mVertexBuffer;
     VkCommandPool mCommandPool;
@@ -100,8 +99,14 @@ private:
     void createCommandBuffers();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
-    debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location,
-            int32_t code, const char *layerPrefix, const char *msg, void *userData);
+    debugCallback(VkDebugReportFlagsEXT flags,
+            VkDebugReportObjectTypeEXT objType,
+            uint64_t obj,
+            size_t location,
+            int32_t code,
+            const char *layerPrefix,
+            const char *msg,
+            void *userData);
 
     void createCommandPool();
 };
