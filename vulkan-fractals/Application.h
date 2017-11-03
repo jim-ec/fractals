@@ -13,6 +13,7 @@
 
 #include "glm/glm.hpp"
 
+#include "Vertex.h"
 #include "util.h"
 
 #pragma once
@@ -52,10 +53,14 @@ private:
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
+    VkBuffer mVertexBuffer;
+    VkDeviceMemory mVertexBufferMemory;
     VkCommandPool mCommandPool;
     std::vector<VkCommandBuffer> mCommandBuffers;
     VkSemaphore mImageAvailableSemaphore;
     VkSemaphore mRenderFinishedSemaphore;
+
+    std::vector<Vertex> mVertices{{{-1, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, -1}, {1, 1}}};
 
     struct
     {
@@ -90,7 +95,17 @@ private:
 
     void createFramebuffers();
 
+    void createVertexBuffer();
+
     void setupCommands();
+
+    /**
+     * Find a suitable memory type for the specified filter and needed properties
+     * @param filter Bitwise memory type filter
+     * @param properties Needed memory properties
+     * @return Index of suitable memory type
+     */
+    uint32_t findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties);
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location,

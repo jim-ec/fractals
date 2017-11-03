@@ -63,6 +63,7 @@ Application::Application()
     createRenderPass();
     createGraphicsPipeline();
     createFramebuffers();
+    createVertexBuffer();
     setupCommands();
 
     fmt::print("Window creation completed\n");
@@ -374,10 +375,15 @@ void Application::createGraphicsPipeline()
     shaderStageInfos[1].pName = "main";
     shaderStageInfos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+    auto binding = Vertex::getBindingDescription();
+    auto attributes = Vertex::getAttributeDescription();
+
     VkPipelineVertexInputStateCreateInfo vertexInputState = {};
     vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputState.vertexBindingDescriptionCount = 0;
-    vertexInputState.vertexAttributeDescriptionCount = 0;
+    vertexInputState.vertexBindingDescriptionCount = 1;
+    vertexInputState.pVertexBindingDescriptions = &binding;
+    vertexInputState.vertexAttributeDescriptionCount = attributes.size();
+    vertexInputState.pVertexAttributeDescriptions = attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
     inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -476,6 +482,47 @@ void Application::createFramebuffers()
     }
 }
 
+
+void Application::createVertexBuffer()
+{
+    {
+        std::array<uint32_t, 1> families = {mQueueFamilyIndices.graphics};
+
+        VkBufferCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        info.size = mVertices.size() * sizeof(Vertex);
+
+        checkVk(vkCreateBuffer(mDevice, &info, nullptr, &mVertexBuffer), "Cannot create vertex buffer");
+    }
+    {
+        VkMemoryRequirements req = {};
+        vkGetBufferMemoryRequirements(mDevice, mVertexBuffer, &req);
+
+        auto memoryTypeIndex = findMemoryType(req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        VkMemoryAllocateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        info.allocationSize = req.size;
+        info.memoryTypeIndex = memoryTypeIndex;
+
+        checkVk(vkAllocateMemory(mDevice, &info, nullptr, &mVertexBufferMemory),
+                "Cannot allocate vertex buffer memory");
+
+        vkBindBufferMemory(mDevice, mVertexBuffer, mVertexBufferMemory, 0);
+    }
+    {
+        VkDeviceSize size = mVertices.size() * sizeof(Vertex);
+
+        void *data;
+        vkMapMemory(mDevice, mVertexBufferMemory, 0, size, 0, &data);
+        memcpy(data, mVertices.data(), size);
+        vkUnmapMemory(mDevice, mVertexBufferMemory);
+    }
+}
+
 void Application::setupCommands()
 {
     // Create command pool:
@@ -529,6 +576,14 @@ void Application::setupCommands()
         }
 
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+
+        {
+            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer};
+            std::array<VkDeviceSize, 1> offsets = {0};
+
+            vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers.data(), offsets.data());
+        }
+
         vkCmdDraw(buffer, 6, 1, 0, 0);
         vkCmdEndRenderPass(buffer);
         checkVk(vkEndCommandBuffer(buffer), "Cannot record command buffer");
@@ -546,6 +601,8 @@ void Application::setupCommands()
 
 Application::~Application()
 {
+    vkFreeMemory(mDevice, mVertexBufferMemory, nullptr);
+    vkDestroyBuffer(mDevice, mVertexBuffer, nullptr);
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
@@ -625,4 +682,18 @@ Application::debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, ui
 {
     std::cout << "VK-DEBUG: " << msg << std::endl;
     return VK_FALSE;
+}
+
+uint32_t Application::findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProps = {};
+    vkGetPhysicalDeviceMemoryProperties(mPhysicalDevice, &memProps);
+
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+        if (filter & (1 << i) && (memProps.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    check(false, "Cannot find suitable memory type");
 }

@@ -14,7 +14,7 @@ elseif (UNIX)
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lvulkan")
 endif ()
 
-set(SOURCE_FILES main.cpp Application.cpp Application.h util.h util.cpp)
+set(SOURCE_FILES main.cpp Application.cpp Application.h util.h util.cpp Vertex.cpp Vertex.h)
 add_executable(${MY_TARGET} ${SOURCE_FILES})
 
 if (MSVC)
