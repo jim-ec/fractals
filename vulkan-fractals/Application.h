@@ -54,12 +54,14 @@ private:
     Pipeline mPipeline;
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
     StagingBuffer mVertexBuffer;
+    StagingBuffer mIndexBuffer;
     VkCommandPool mCommandPool;
     std::vector<VkCommandBuffer> mCommandBuffers;
     VkSemaphore mImageAvailableSemaphore;
     VkSemaphore mRenderFinishedSemaphore;
 
-    std::vector<Vertex> mVertices{{{-1, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, -1}, {1, 1}}};
+    std::vector<Vertex> mVertices{{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
+    std::vector<uint16_t> mIndices{{0, 1, 2, 2, 1, 3}};
 
     struct
     {

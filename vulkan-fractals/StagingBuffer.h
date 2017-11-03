@@ -13,7 +13,7 @@ public:
 
     void destroy();
 
-    VkBuffer getDeviceBufferHandle();
+    VkBuffer getBufferHandle();
 
 private:
     BareBuffer mHostBuffer, mDeviceBuffer;

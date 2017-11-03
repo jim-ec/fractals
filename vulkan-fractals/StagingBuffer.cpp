@@ -26,7 +26,7 @@ void StagingBuffer::destroy()
     mDeviceBuffer.destroy();
 }
 
-VkBuffer StagingBuffer::getDeviceBufferHandle()
+VkBuffer StagingBuffer::getBufferHandle()
 {
     return mDeviceBuffer.getBufferHandle();
 }

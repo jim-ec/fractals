@@ -10,6 +10,7 @@ int Application::sInstanceCount = 0;
 
 Application::Application()
         : mVertexBuffer{mPhysicalDevice, mDevice}
+          , mIndexBuffer{mPhysicalDevice, mDevice}
           , mPipeline{mPhysicalDevice, mDevice}
 {
     // Create window:
@@ -367,9 +368,10 @@ void Application::createFramebuffers()
 
 void Application::createVertexBuffer()
 {
-    mVertexBuffer.init(mVertices.data(), byteSize(mVertices),
-                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, mCommandPool,
+    mVertexBuffer.init(mVertices.data(), byteSize(mVertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, mCommandPool,
                        mGraphicsQueue);
+    mIndexBuffer.init(mIndices.data(), byteSize(mIndices), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, mCommandPool,
+                      mGraphicsQueue);
 }
 
 void Application::createCommandPool()
@@ -427,13 +429,14 @@ void Application::createCommandBuffers()
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.getHandle());
 
         {
-            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer.getDeviceBufferHandle()};
+            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer.getBufferHandle()};
             std::array<VkDeviceSize, 1> offsets = {0};
-
             vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers.data(), offsets.data());
+
+            vkCmdBindIndexBuffer(buffer, mIndexBuffer.getBufferHandle(), 0, VK_INDEX_TYPE_UINT16);
         }
 
-        vkCmdDraw(buffer, 6, 1, 0, 0);
+        vkCmdDrawIndexed(buffer, static_cast<uint32_t>(mIndices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(buffer);
         checkVk(vkEndCommandBuffer(buffer), "Cannot record command buffer");
     }
@@ -451,6 +454,7 @@ void Application::createCommandBuffers()
 Application::~Application()
 {
     mVertexBuffer.destroy();
+    mIndexBuffer.destroy();
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
