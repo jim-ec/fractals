@@ -47,8 +47,10 @@ private:
     VkSwapchainKHR mSwapchain;
     std::vector<VkImage> mSwapchainImages;
     std::vector<VkImageView> mSwapchainImageViews;
+    VkRenderPass mRenderPass;
     std::array<VkShaderModule, 2> mShaderModules;
     VkPipelineLayout mPipelineLayout;
+    VkPipeline mPipeline;
 
     struct
     {
@@ -76,6 +78,8 @@ private:
     void createSwapchain();
 
     void createSwapchainViews();
+
+    void createRenderPass();
 
     void createGraphicsPipeline();
 

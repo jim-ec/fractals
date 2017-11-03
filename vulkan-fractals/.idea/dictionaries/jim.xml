@@ -4,6 +4,7 @@
       <w>multisample</w>
       <w>rasterization</w>
       <w>shaders</w>
+      <w>subpass</w>
       <w>swapchain</w>
       <w>vert</w>
     </words>

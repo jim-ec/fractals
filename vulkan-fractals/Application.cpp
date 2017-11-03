@@ -60,6 +60,7 @@ Application::Application()
     createLogicalDevice();
     createSwapchain();
     createSwapchainViews();
+    createRenderPass();
     createGraphicsPipeline();
 
     fmt::print("Window creation completed\n");
@@ -292,6 +293,37 @@ void Application::createSwapchainViews()
     }
 }
 
+void Application::createRenderPass()
+{
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format = mSwapchainParams.surfaceFormat.format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference attachmentRef = {};
+    attachmentRef.attachment = 0;
+    attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &attachmentRef;
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+    VkRenderPassCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    info.attachmentCount = 1;
+    info.pAttachments = &colorAttachment;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+
+    checkVk(vkCreateRenderPass(mDevice, &info, nullptr, &mRenderPass), "Cannot create render pass");
+}
+
 void Application::createGraphicsPipeline()
 {
     // Create vertex shader:
@@ -352,6 +384,13 @@ void Application::createGraphicsPipeline()
     scissor.extent = mSwapchainParams.extent;
     scissor.offset = {0, 0};
 
+    VkPipelineViewportStateCreateInfo viewportState = {};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &scissor;
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &viewport;
+
     VkPipelineRasterizationStateCreateInfo rasterizationState = {};
     rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
@@ -386,13 +425,32 @@ void Application::createGraphicsPipeline()
 
         checkVk(vkCreatePipelineLayout(mDevice, &info, nullptr, &mPipelineLayout), "Cannot create pipeline layout");
     }
+
+    VkGraphicsPipelineCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.layout = mPipelineLayout;
+    info.stageCount = shaderStageInfos.size();
+    info.pStages = shaderStageInfos.data();
+    info.pColorBlendState = &colorBlendState;
+    info.pInputAssemblyState = &inputAssemblyState;
+    info.pMultisampleState = &multisampleState;
+    info.pRasterizationState = &rasterizationState;
+    info.pVertexInputState = &vertexInputState;
+    info.renderPass = mRenderPass;
+    info.subpass = 0;
+    info.pViewportState = &viewportState;
+
+    checkVk(vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &info, nullptr, &mPipeline),
+            "Cannot create graphics pipeline");
 }
 
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 Application::~Application()
 {
+    vkDestroyPipeline(mDevice, mPipeline, nullptr);
     vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
+    vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
     for (auto &module : mShaderModules) {
         vkDestroyShaderModule(mDevice, module, nullptr);
     }
