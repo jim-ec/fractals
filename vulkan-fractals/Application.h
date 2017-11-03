@@ -54,6 +54,8 @@ private:
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
     VkCommandPool mCommandPool;
     std::vector<VkCommandBuffer> mCommandBuffers;
+    VkSemaphore mImageAvailableSemaphore;
+    VkSemaphore mRenderFinishedSemaphore;
 
     struct
     {

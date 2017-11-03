@@ -316,12 +316,22 @@ void Application::createRenderPass()
     subpass.pColorAttachments = &attachmentRef;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
+    VkSubpassDependency dep = {};
+    dep.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dep.dstSubpass = 0;
+    dep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dep.srcAccessMask = 0;
+    dep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
     VkRenderPassCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     info.attachmentCount = 1;
     info.pAttachments = &colorAttachment;
     info.subpassCount = 1;
     info.pSubpasses = &subpass;
+    info.dependencyCount = 1;
+    info.pDependencies = &dep;
 
     checkVk(vkCreateRenderPass(mDevice, &info, nullptr, &mRenderPass), "Cannot create render pass");
 }
@@ -523,13 +533,22 @@ void Application::setupCommands()
         vkCmdEndRenderPass(buffer);
         checkVk(vkEndCommandBuffer(buffer), "Cannot record command buffer");
     }
-}
 
-#pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
+    // Create semaphores:
+    {
+        VkSemaphoreCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        checkVk(vkCreateSemaphore(mDevice, &info, nullptr, &mImageAvailableSemaphore), "Cannot create semaphore");
+        checkVk(vkCreateSemaphore(mDevice, &info, nullptr, &mRenderFinishedSemaphore), "Cannot create semaphore");
+    }
+}
 
 Application::~Application()
 {
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
+    vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
     for (auto &framebuffer : mSwapchainFramebuffers) {
         vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
     }
@@ -557,8 +576,46 @@ void Application::run()
 {
     while (!glfwWindowShouldClose(mWindow)) {
         glfwPollEvents();
+
+        uint32_t imageIndex;
+        vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(), mImageAvailableSemaphore,
+                              VK_NULL_HANDLE, &imageIndex);
+
+        VkCommandBuffer *commandBuffer = &mCommandBuffers[imageIndex];
+
+        {
+            VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+            VkSubmitInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            info.commandBufferCount = 1;
+            info.pCommandBuffers = commandBuffer;
+            info.waitSemaphoreCount = 1;
+            info.pWaitSemaphores = &mImageAvailableSemaphore;
+            info.pWaitDstStageMask = waitStages;
+            info.signalSemaphoreCount = 1;
+            info.pSignalSemaphores = &mRenderFinishedSemaphore;
+
+            checkVk(vkQueueSubmit(mGraphicsQueue, 1, &info, VK_NULL_HANDLE), "Cannot submit queue");
+        }
+
+        {
+            VkPresentInfoKHR info = {};
+            info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            info.waitSemaphoreCount = 1;
+            info.pWaitSemaphores = &mRenderFinishedSemaphore;
+            info.swapchainCount = 1;
+            info.pSwapchains = &mSwapchain;
+            info.pImageIndices = &imageIndex;
+
+            checkVk(vkQueuePresentKHR(mPresentQueue, &info), "Cannot present on swapchain");
+        }
     }
+
+    vkDeviceWaitIdle(mDevice);
 }
+
+#pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 VkBool32
 Application::debugCallback(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char *,
