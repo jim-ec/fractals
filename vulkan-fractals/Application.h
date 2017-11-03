@@ -48,6 +48,7 @@ private:
     std::vector<VkImage> mSwapchainImages;
     std::vector<VkImageView> mSwapchainImageViews;
     std::array<VkShaderModule, 2> mShaderModules;
+    VkPipelineLayout mPipelineLayout;
 
     struct
     {
