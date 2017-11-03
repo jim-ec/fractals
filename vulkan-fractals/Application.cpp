@@ -577,6 +577,8 @@ void Application::run()
     while (!glfwWindowShouldClose(mWindow)) {
         glfwPollEvents();
 
+        vkQueueWaitIdle(mPresentQueue);
+
         uint32_t imageIndex;
         vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(), mImageAvailableSemaphore,
                               VK_NULL_HANDLE, &imageIndex);
