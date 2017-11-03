@@ -62,6 +62,8 @@ Application::Application()
     createSwapchainViews();
     createRenderPass();
     createGraphicsPipeline();
+    createFramebuffers();
+    setupCommands();
 
     fmt::print("Window creation completed\n");
 }
@@ -444,10 +446,93 @@ void Application::createGraphicsPipeline()
             "Cannot create graphics pipeline");
 }
 
+void Application::createFramebuffers()
+{
+    mSwapchainFramebuffers.resize(mSwapchainImages.size());
+
+    for (size_t i = 0; i < mSwapchainFramebuffers.size(); i++) {
+        std::array<VkImageView, 1> attachments{{mSwapchainImageViews[i]}};
+
+        VkFramebufferCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        info.attachmentCount = attachments.size();
+        info.pAttachments = attachments.data();
+        info.renderPass = mRenderPass;
+        info.width = mSwapchainParams.extent.width;
+        info.height = mSwapchainParams.extent.height;
+        info.layers = 1;
+
+        checkVk(vkCreateFramebuffer(mDevice, &info, nullptr, &mSwapchainFramebuffers[i]), "Cannot create framebuffer");
+    }
+}
+
+void Application::setupCommands()
+{
+    // Create command pool:
+    {
+        VkCommandPoolCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        info.queueFamilyIndex = mQueueFamilyIndices.graphics;
+
+        checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
+    }
+
+    // Allocate command buffers:
+    mCommandBuffers.resize(mSwapchainFramebuffers.size());
+    {
+        VkCommandBufferAllocateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        info.commandBufferCount = static_cast<uint32_t>(mCommandBuffers.size());
+        info.commandPool = mCommandPool;
+        info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+        checkVk(vkAllocateCommandBuffers(mDevice, &info, mCommandBuffers.data()), "Cannot allocate command buffers");
+    }
+
+    // Record command buffers:
+    for (size_t i = 0; i < mCommandBuffers.size(); i++) {
+        auto &buffer = mCommandBuffers[i];
+
+        // Begin command buffer:
+        {
+            VkCommandBufferBeginInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+            vkBeginCommandBuffer(buffer, &info);
+        }
+
+        // Begin render pass:
+        {
+            VkClearValue clearColor = {1.0f, 1.0f, 1.0f, 1.0f};
+
+            VkRenderPassBeginInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            info.renderPass = mRenderPass;
+            info.framebuffer = mSwapchainFramebuffers[i];
+            info.renderArea.offset = {0, 0};
+            info.renderArea.extent = mSwapchainParams.extent;
+            info.clearValueCount = 1;
+            info.pClearValues = &clearColor;
+
+            vkCmdBeginRenderPass(buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+        }
+
+        vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+        vkCmdDraw(buffer, 3, 1, 0, 0);
+        vkCmdEndRenderPass(buffer);
+        checkVk(vkEndCommandBuffer(buffer), "Cannot record command buffer");
+    }
+}
+
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 Application::~Application()
 {
+    vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
+    for (auto &framebuffer : mSwapchainFramebuffers) {
+        vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
+    }
     vkDestroyPipeline(mDevice, mPipeline, nullptr);
     vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
     vkDestroyRenderPass(mDevice, mRenderPass, nullptr);

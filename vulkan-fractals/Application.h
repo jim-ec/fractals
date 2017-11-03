@@ -51,6 +51,9 @@ private:
     std::array<VkShaderModule, 2> mShaderModules;
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
+    std::vector<VkFramebuffer> mSwapchainFramebuffers;
+    VkCommandPool mCommandPool;
+    std::vector<VkCommandBuffer> mCommandBuffers;
 
     struct
     {
@@ -82,6 +85,10 @@ private:
     void createRenderPass();
 
     void createGraphicsPipeline();
+
+    void createFramebuffers();
+
+    void setupCommands();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location,

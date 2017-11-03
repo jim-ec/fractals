@@ -1,6 +1,8 @@
 <component name="ProjectDictionaryState">
   <dictionary name="jim">
     <words>
+      <w>framebuffer</w>
+      <w>framebuffers</w>
       <w>multisample</w>
       <w>rasterization</w>
       <w>shaders</w>
