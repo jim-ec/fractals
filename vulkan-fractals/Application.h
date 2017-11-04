@@ -75,6 +75,7 @@ private:
     glm::vec2 mMoveDirections;
     int mZoomDirection = 0;
     float mCurrentZoom = 1;
+    glm::vec2 mTranslation;
 
     std::vector<Vertex> mVertices{{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
     std::vector<uint16_t> mIndices{{0, 1, 2, 2, 1, 3}};

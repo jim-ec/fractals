@@ -22,9 +22,9 @@ public:
 
     void destroy();
 
-    void init(void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+    void init(const void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 
-    void write(void *srcData, VkDeviceSize offset = 0, VkDeviceSize size = 0);
+    void write(const void *srcData, VkDeviceSize offset = 0, VkDeviceSize size = 0);
 
     void copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size = 0);
 

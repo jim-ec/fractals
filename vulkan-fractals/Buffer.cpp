@@ -6,7 +6,7 @@ Buffer::Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device)
 {
 }
 
-void Buffer::init(void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+void Buffer::init(const void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
     mSize = size;
 
@@ -123,7 +123,7 @@ void Buffer::copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize 
     vkFreeCommandBuffers(mDevice, pool, 1, &commandBuffer);
 }
 
-void Buffer::write(void *srcData, VkDeviceSize offset, VkDeviceSize size)
+void Buffer::write(const void *srcData, VkDeviceSize offset, VkDeviceSize size)
 {
     if (0 == size) {
         size = mSize;

@@ -9,7 +9,7 @@ public:
 
     StagingBuffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device);
 
-    void init(void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkCommandPool pool, VkQueue queue);
+    void init(const void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkCommandPool pool, VkQueue queue);
 
     void destroy();
 

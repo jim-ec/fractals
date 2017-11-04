@@ -26,8 +26,11 @@ Application::Application()
     glfwSetWindowUserPointer(mWindow, this);
     glfwSetKeyCallback(mWindow, &sOnKey);
 
+#ifndef NDEBUG
     // Validation layers:
     {
+        fmt::printf("Load validation layers ...\n");
+
         std::vector<bool> requestedAreAvailable;
         requestedAreAvailable.resize(mValidationLayers.size());
         auto availableLayers = listVulkan<VkLayerProperties>(&vkEnumerateInstanceLayerProperties);
@@ -48,6 +51,7 @@ Application::Application()
         check(iter == requestedAreAvailable.end(), "Requested layer ",
               mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
     }
+#endif // NDEBUG
 
     // Extensions:
     {
@@ -58,7 +62,9 @@ Application::Application()
             mInstanceExtensions.push_back(glfwExtensions[i]);
         }
 
+#ifndef NDEBUG
         mInstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif // NDEBUG
     }
 
     createInstance();
@@ -94,6 +100,7 @@ void Application::createInstance()
 
 void Application::setupDebugReport()
 {
+#ifndef NDEBUG
     VkDebugReportCallbackCreateInfoEXT info = {};
     info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     info.pfnCallback = &debugCallback;
@@ -101,6 +108,7 @@ void Application::setupDebugReport()
 
     checkVk(invokeVk(vkCreateDebugReportCallbackEXT, mInstance, &info, nullptr, &mDebugCallback),
             "Cannot create debug report callback");
+#endif // NDEBUG
 }
 
 void Application::createSurface()
@@ -526,7 +534,9 @@ Application::~Application()
     vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
     vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
+#ifndef NDEBUG
     invokeVk(vkDestroyDebugReportCallbackEXT, mInstance, mDebugCallback, nullptr);
+#endif // NDEBUG
     vkDestroyInstance(mInstance, nullptr);
     glfwDestroyWindow(mWindow);
     if (0 == --sInstanceCount) {
@@ -551,26 +561,23 @@ void Application::syncWithFPS()
 
 void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMillis)
 {
-    static auto time = passedMillis.count();
-    time += passedMillis.count();
     UniformBufferObject ubo = {};
     float aspect = static_cast<float>(mSwapchainParams.extent.width) / mSwapchainParams.extent.height;
 
     mCurrentZoom *= 1 + mZoomDirection * 0.01;
 
-    static glm::vec2 translation;
-    translation.x += 0.1 * mMoveDirections.x / mCurrentZoom;
-    translation.y += 0.1 * mMoveDirections.y / mCurrentZoom;
+    mTranslation.x += 0.1 * mMoveDirections.x / mCurrentZoom;
+    mTranslation.y += 0.1 * mMoveDirections.y / mCurrentZoom;
 
     ubo.model = glm::scale(glm::mat4{}, glm::vec3{mCurrentZoom});
-
-    ubo.fractalTransform[2] = translation.x;
-    ubo.fractalTransform[3] = translation.y;
-
     ubo.view = glm::translate(ubo.view, glm::vec3{0, 0, -1});
     ubo.proj = glm::ortho(-1.f, 1.f, 1.f, -1.f, 0.1f, 10.f);
+
     ubo.fractalTransform.x = aspect * 2.0f / mCurrentZoom;
     ubo.fractalTransform.y = 1 * 2.0f / mCurrentZoom;
+    ubo.fractalTransform[2] = mTranslation.x;
+    ubo.fractalTransform[3] = mTranslation.y;
+
     mUniformBuffer.write(&ubo);
 }
 
@@ -699,10 +706,13 @@ void Application::onKey(int key, int action)
                 break;
             }
             if (mZoomDirection != 0) {
+                // Currently zooming => stop zoom
                 mZoomDirection = 0;
             }
             else {
+                // No zoom => return to default view
                 mCurrentZoom = 1;
+                mTranslation = {};
             }
             break;
 
