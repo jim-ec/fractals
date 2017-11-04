@@ -7,6 +7,7 @@
       <w>ndebug</w>
       <w>proj</w>
       <w>rasterization</w>
+      <w>resized</w>
       <w>scancode</w>
       <w>shaders</w>
       <w>subpass</w>

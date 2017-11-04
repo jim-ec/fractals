@@ -1,7 +1,5 @@
 #include "Application.h"
 
-const uint32_t Application::WINDOW_WIDTH = 800;
-const uint32_t Application::WINDOW_HEIGHT = 600;
 const int Application::FPS = 40;
 const std::chrono::milliseconds Application::RENDER_MILLIS{1000 / FPS};
 
@@ -21,10 +19,10 @@ Application::Application()
         glfwInit();
     }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    mWindow = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan window", nullptr, nullptr);
+    mWindow = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
     glfwSetWindowUserPointer(mWindow, this);
     glfwSetKeyCallback(mWindow, &sOnKey);
+    glfwSetWindowSizeCallback(mWindow, &onWindowResized);
 
 #ifndef NDEBUG
     // Validation layers:
@@ -82,8 +80,43 @@ Application::Application()
     createDescriptorPool();
     createDescriptorSet();
     createCommandBuffers();
+    createSemaphores();
 
     fmt::print("Window creation completed\n");
+}
+
+void Application::onWindowResized(GLFWwindow *window, int width, int height)
+{
+    if (width == 0 || height == 0) { return; }
+    reinterpret_cast<Application *>(glfwGetWindowUserPointer(window))->recreateSwapchain();
+}
+
+void Application::recreateSwapchain()
+{
+    vkDeviceWaitIdle(mDevice);
+
+    destroySwapchain();
+
+    createSwapchain();
+    createSwapchainViews();
+    createRenderPass();
+    createGraphicsPipeline();
+    createFramebuffers();
+    createCommandBuffers();
+}
+
+void Application::destroySwapchain()
+{
+    for (auto &framebuffer : mSwapchainFramebuffers) {
+        vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
+    }
+    vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
+    mPipeline.destroy();
+    for (auto &view : mSwapchainImageViews) {
+        vkDestroyImageView(mDevice, view, nullptr);
+    }
+    vkFreeCommandBuffers(mDevice, mCommandPool, static_cast<uint32_t>(mCommandBuffers.size()), mCommandBuffers.data());
+    vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
 }
 
 void Application::createInstance()
@@ -262,8 +295,12 @@ void Application::createSwapchain()
         mSwapchainParams.extent = caps.currentExtent;
     }
     else {
-        mSwapchainParams.extent.width = clamp(WINDOW_WIDTH, caps.minImageExtent.width, caps.maxImageExtent.width);
-        mSwapchainParams.extent.height = clamp(WINDOW_HEIGHT, caps.minImageExtent.height, caps.maxImageExtent.height);
+        int width, height;
+        glfwGetWindowSize(mWindow, &width, &height);
+        mSwapchainParams.extent.width = clamp(static_cast<uint32_t>(width), caps.minImageExtent.width,
+                                              caps.maxImageExtent.width);
+        mSwapchainParams.extent.height = clamp(static_cast<uint32_t>(height), caps.minImageExtent.height,
+                                               caps.maxImageExtent.height);
     }
     info.imageExtent = mSwapchainParams.extent;
 
@@ -503,19 +540,20 @@ void Application::createCommandBuffers()
         vkCmdEndRenderPass(buffer);
         checkVk(vkEndCommandBuffer(buffer), "Cannot record command buffer");
     }
+}
 
-    // Create semaphores:
-    {
-        VkSemaphoreCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+void Application::createSemaphores()
+{
+    VkSemaphoreCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        checkVk(vkCreateSemaphore(mDevice, &info, nullptr, &mImageAvailableSemaphore), "Cannot create semaphore");
-        checkVk(vkCreateSemaphore(mDevice, &info, nullptr, &mRenderFinishedSemaphore), "Cannot create semaphore");
-    }
+    checkVk(vkCreateSemaphore(mDevice, &info, nullptr, &mImageAvailableSemaphore), "Cannot create semaphore");
+    checkVk(vkCreateSemaphore(mDevice, &info, nullptr, &mRenderFinishedSemaphore), "Cannot create semaphore");
 }
 
 Application::~Application()
 {
+    destroySwapchain();
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, nullptr);
     mUniformBuffer.destroy();
     mVertexBuffer.destroy();
@@ -523,15 +561,6 @@ Application::~Application()
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroySemaphore(mDevice, mImageAvailableSemaphore, nullptr);
     vkDestroySemaphore(mDevice, mRenderFinishedSemaphore, nullptr);
-    for (auto &framebuffer : mSwapchainFramebuffers) {
-        vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
-    }
-    vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
-    mPipeline.destroy();
-    for (auto &view : mSwapchainImageViews) {
-        vkDestroyImageView(mDevice, view, nullptr);
-    }
-    vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
     vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
 #ifndef NDEBUG
@@ -566,8 +595,8 @@ void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMil
 
     mCurrentZoom *= 1 + mZoomDirection * 0.01;
 
-    mTranslation.x += 0.1 * mMoveDirections.x / mCurrentZoom;
-    mTranslation.y += 0.1 * mMoveDirections.y / mCurrentZoom;
+    mTranslation.x += 0.06 * mMoveDirections.x / mCurrentZoom;
+    mTranslation.y += 0.06 * mMoveDirections.y / mCurrentZoom;
 
     ubo.model = glm::scale(glm::mat4{}, glm::vec3{mCurrentZoom});
     ubo.view = glm::translate(ubo.view, glm::vec3{0, 0, -1});
@@ -608,8 +637,14 @@ void Application::draw()
     vkQueueWaitIdle(mPresentQueue);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(), mImageAvailableSemaphore,
-                          VK_NULL_HANDLE, &imageIndex);
+    {
+        auto result = vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(),
+                                            mImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            recreateSwapchain();
+            check(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Cannot acquire next swapchain image");
+        }
+    }
 
     VkCommandBuffer *commandBuffer = &mCommandBuffers[imageIndex];
 

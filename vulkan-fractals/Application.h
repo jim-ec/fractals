@@ -36,8 +36,6 @@ public:
 
 private:
     static int sInstanceCount;
-    static const uint32_t WINDOW_WIDTH;
-    static const uint32_t WINDOW_HEIGHT;
     static const int FPS;
     static const std::chrono::milliseconds RENDER_MILLIS;
 
@@ -99,6 +97,8 @@ private:
         glm::vec4 fractalTransform;
     };
 
+    void recreateSwapchain();
+
     void createInstance();
 
     void setupDebugReport();
@@ -128,6 +128,8 @@ private:
     void createCommandPool();
 
     void createCommandBuffers();
+
+    void createSemaphores();
 
     void draw();
 
@@ -160,4 +162,8 @@ private:
     static void sOnKey(GLFWwindow *window, int key, int scancode, int action, int mods);
 
     void onKey(int key, int action);
+
+    void destroySwapchain();
+
+    static void onWindowResized(GLFWwindow *window, int width, int height);
 };
