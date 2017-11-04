@@ -27,10 +27,7 @@ endif ()
 
 set(GLSL_VALIDATOR /home/jim/VulkanSDK/1.0.61.1/x86_64/bin/glslangValidator)
 
-file(GLOB_RECURSE GLSL_SOURCE_FILES
-        "shaders/*.frag"
-        "shaders/*.vert"
-        )
+file(GLOB_RECURSE GLSL_SOURCE_FILES shaders/*.frag shaders/*.vert)
 
 foreach (GLSL ${GLSL_SOURCE_FILES})
     get_filename_component(FILE_NAME ${GLSL} NAME)

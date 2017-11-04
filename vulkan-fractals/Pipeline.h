@@ -23,9 +23,15 @@ public:
     VkPipeline getHandle() const;
 
 private:
+
+    struct UniformBufferObject {
+        glm::mat4 model, view, proj;
+    };
+
     const VkPhysicalDevice &mPhysicalDevice;
     const VkDevice &mDevice;
     std::array<VkShaderModule, 2> mShaderModules;
+    VkDescriptorSetLayout mDescriptorSetLayout;
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
 

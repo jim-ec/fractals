@@ -15,6 +15,23 @@ Pipeline::Pipeline(const VkPhysicalDevice &physicalDevice, const VkDevice &devic
 
 void Pipeline::init(VkExtent2D swapchainExtent, VkRenderPass renderPass)
 {
+    // Create descriptor set layout:
+    {
+        VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        info.bindingCount = 1;
+        info.pBindings = &uboLayoutBinding;
+
+        checkVk(vkCreateDescriptorSetLayout(mDevice, &info, nullptr, &mDescriptorSetLayout),
+                "Cannot create descriptor set layout");
+    }
+
     // Create vertex shader:
     {
         auto vertShaderCode = readRawFile("shaders/quad.vert.spv");
@@ -115,7 +132,8 @@ void Pipeline::init(VkExtent2D swapchainExtent, VkRenderPass renderPass)
         VkPipelineLayoutCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         info.pushConstantRangeCount = 0;
-        info.setLayoutCount = 0;
+        info.setLayoutCount = 1;
+        info.pSetLayouts = &mDescriptorSetLayout;
 
         checkVk(vkCreatePipelineLayout(mDevice, &info, nullptr, &mPipelineLayout), "Cannot create pipeline layout");
     }
@@ -142,6 +160,7 @@ void Pipeline::init(VkExtent2D swapchainExtent, VkRenderPass renderPass)
 
 void Pipeline::destroy()
 {
+    vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayout, nullptr);
     vkDestroyPipeline(mDevice, mPipeline, nullptr);
     vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
     for (auto &module : mShaderModules) {
