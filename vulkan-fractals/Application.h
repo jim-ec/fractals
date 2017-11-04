@@ -44,7 +44,7 @@ private:
     GLFWwindow *mWindow;
     std::chrono::system_clock::time_point mFPSSync;
 
-    std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation", /*"VK_LAYER_RENDERDOC_Capture"*/ }};
+    std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_RENDERDOC_Capture"}};
     std::vector<const char *> mInstanceExtensions{{VK_EXT_DEBUG_REPORT_EXTENSION_NAME}};
     std::vector<const char *> mDeviceExtensions{{VK_KHR_SWAPCHAIN_EXTENSION_NAME}};
     VkDebugReportCallbackEXT mDebugCallback;
@@ -89,6 +89,7 @@ private:
     struct UniformBufferObject
     {
         glm::mat4 model, view, proj;
+        glm::vec4 scaleData;
     };
 
     void createInstance();

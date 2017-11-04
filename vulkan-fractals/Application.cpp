@@ -549,14 +549,15 @@ void Application::syncWithFPS()
 
 void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMillis)
 {
-    fmt::printf("passed millis: %d\n", static_cast<int>(passedMillis.count()));
+    static auto time = passedMillis.count();
+    time += passedMillis.count();
     UniformBufferObject ubo = {};
-    ubo.model = glm::rotate(glm::mat4{1.0f}, passedMillis.count() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f),
-                                mSwapchainParams.extent.width / static_cast<float>(mSwapchainParams.extent.height),
-                                0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
+    float aspect = static_cast<float>(mSwapchainParams.extent.width) / mSwapchainParams.extent.height;
+    ubo.model = glm::mat4{};
+    ubo.view = glm::translate(glm::mat4{}, glm::vec3{0, 0, -1});
+    ubo.proj = glm::ortho(-aspect, aspect, 1.f, -1.f, 0.1f, 10.f);
+    ubo.scaleData.x = aspect * 2.0f;
+    ubo.scaleData.y = 1 * 2.0f;
     mUniformBuffer.write(&ubo);
 }
 

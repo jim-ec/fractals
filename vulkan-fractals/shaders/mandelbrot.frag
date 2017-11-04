@@ -33,6 +33,6 @@ void main() {
         outColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
     else {
-        outColor = mix(vec4(1.0, 1.0, 1.0, 1.0), EDGE_COLOR, nf);
+        outColor = mix(vec4(1.0, 0.0, 1.0, 1.0), EDGE_COLOR, nf);
     }
 }

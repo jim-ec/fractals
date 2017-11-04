@@ -5,6 +5,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
+    vec4 scaleData;
 } ubo;
 
 layout(location = 0) in vec2 inPosition;
@@ -18,4 +19,6 @@ out gl_PerVertex {
 void main() {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
     vPosition = gl_Position.xy;
+    vPosition.x *= ubo.scaleData.x;
+    vPosition.y *= ubo.scaleData.y;
 }
