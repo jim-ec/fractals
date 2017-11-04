@@ -44,7 +44,9 @@ private:
     GLFWwindow *mWindow;
     std::chrono::system_clock::time_point mFPSSync;
 
-    std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation", "VK_LAYER_RENDERDOC_Capture"}};
+    std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation",
+                                                        //"VK_LAYER_RENDERDOC_Capture"
+                                                }};
     std::vector<const char *> mInstanceExtensions{{VK_EXT_DEBUG_REPORT_EXTENSION_NAME}};
     std::vector<const char *> mDeviceExtensions{{VK_KHR_SWAPCHAIN_EXTENSION_NAME}};
     VkDebugReportCallbackEXT mDebugCallback;
@@ -70,6 +72,10 @@ private:
     VkDescriptorPool mDescriptorPool;
     VkDescriptorSet mDescriptorSet;
 
+    glm::vec2 mMoveDirections;
+    int mZoomDirection = 0;
+    float mCurrentZoom = 1;
+
     std::vector<Vertex> mVertices{{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
     std::vector<uint16_t> mIndices{{0, 1, 2, 2, 1, 3}};
 
@@ -89,7 +95,7 @@ private:
     struct UniformBufferObject
     {
         glm::mat4 model, view, proj;
-        glm::vec4 scaleData;
+        glm::vec4 fractalTransform;
     };
 
     void createInstance();
@@ -128,6 +134,18 @@ private:
 
     void syncWithFPS();
 
+    /**
+     * Vulkan debug report callback
+     * @param flags
+     * @param objType
+     * @param obj
+     * @param location
+     * @param code
+     * @param layerPrefix
+     * @param msg
+     * @param userData
+     * @return
+     */
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags,
             VkDebugReportObjectTypeEXT objType,
@@ -137,4 +155,8 @@ private:
             const char *layerPrefix,
             const char *msg,
             void *userData);
+
+    static void sOnKey(GLFWwindow *window, int key, int scancode, int action, int mods);
+
+    void onKey(int key, int action);
 };

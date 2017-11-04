@@ -23,6 +23,8 @@ Application::Application()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     mWindow = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan window", nullptr, nullptr);
+    glfwSetWindowUserPointer(mWindow, this);
+    glfwSetKeyCallback(mWindow, &sOnKey);
 
     // Validation layers:
     {
@@ -553,11 +555,22 @@ void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMil
     time += passedMillis.count();
     UniformBufferObject ubo = {};
     float aspect = static_cast<float>(mSwapchainParams.extent.width) / mSwapchainParams.extent.height;
-    ubo.model = glm::mat4{};
-    ubo.view = glm::translate(glm::mat4{}, glm::vec3{0, 0, -1});
+
+    mCurrentZoom *= 1 + mZoomDirection * 0.01;
+
+    static glm::vec2 translation;
+    translation.x += 0.1 * mMoveDirections.x / mCurrentZoom;
+    translation.y += 0.1 * mMoveDirections.y / mCurrentZoom;
+
+    ubo.model = glm::scale(glm::mat4{}, glm::vec3{mCurrentZoom});
+
+    ubo.fractalTransform[2] = translation.x;
+    ubo.fractalTransform[3] = translation.y;
+
+    ubo.view = glm::translate(ubo.view, glm::vec3{0, 0, -1});
     ubo.proj = glm::ortho(-aspect, aspect, 1.f, -1.f, 0.1f, 10.f);
-    ubo.scaleData.x = aspect * 2.0f;
-    ubo.scaleData.y = 1 * 2.0f;
+    ubo.fractalTransform.x = aspect * 2.0f / mCurrentZoom;
+    ubo.fractalTransform.y = 1 * 2.0f / mCurrentZoom;
     mUniformBuffer.write(&ubo);
 }
 
@@ -635,4 +648,62 @@ VkBool32 Application::debugCallback(VkDebugReportFlagsEXT,
 {
     throw std::runtime_error{msg};
     return VK_FALSE;
+}
+
+void Application::sOnKey(GLFWwindow *window, int key, int, int action, int)
+{
+    reinterpret_cast<Application *>(glfwGetWindowUserPointer(window))->onKey(key, action);
+}
+
+void Application::onKey(int key, int action)
+{
+    if (action == GLFW_RELEASE) {
+        mMoveDirections.x = 0;
+        mMoveDirections.y = 0;
+        return;
+    }
+
+    switch (key) {
+        case GLFW_KEY_UP:
+        case GLFW_KEY_W:
+            mMoveDirections.y = -1;
+            break;
+
+        case GLFW_KEY_DOWN:
+        case GLFW_KEY_S:
+            mMoveDirections.y = 1;
+            break;
+
+        case GLFW_KEY_LEFT:
+        case GLFW_KEY_A:
+            mMoveDirections.x = -1;
+            break;
+
+        case GLFW_KEY_RIGHT:
+        case GLFW_KEY_D:
+            mMoveDirections.x = 1;
+            break;
+
+        case GLFW_KEY_PAGE_UP:
+        case GLFW_KEY_Q:
+            mZoomDirection++;
+            break;
+
+        case GLFW_KEY_PAGE_DOWN:
+        case GLFW_KEY_E:
+            mZoomDirection--;
+            break;
+
+        case GLFW_KEY_SPACE:
+            if (mZoomDirection != 0) {
+                mZoomDirection = 0;
+            }
+            else {
+                mCurrentZoom = 1;
+            }
+            break;
+
+        default:
+            fmt::printf("Unknown key pressed: %d\n", key);
+    }
 }

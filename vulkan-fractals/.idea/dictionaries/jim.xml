@@ -6,6 +6,7 @@
       <w>multisample</w>
       <w>proj</w>
       <w>rasterization</w>
+      <w>scancode</w>
       <w>shaders</w>
       <w>subpass</w>
       <w>swapchain</w>
