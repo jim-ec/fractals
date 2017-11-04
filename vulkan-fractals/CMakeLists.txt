@@ -8,7 +8,7 @@ add_subdirectory(glfw-3.2.1)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(inc)
-if (MSVC)
+if (WIN32)
     link_directories(lib-win32)
 elseif (UNIX)
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lvulkan")
@@ -17,7 +17,7 @@ endif ()
 set(SOURCE_FILES main.cpp Application.cpp Application.h util.h util.cpp Vertex.cpp Vertex.h BareBuffer.cpp BareBuffer.h StagingBuffer.cpp StagingBuffer.h Pipeline.cpp Pipeline.h)
 add_executable(${MY_TARGET} ${SOURCE_FILES})
 
-if (MSVC)
+if (WIN32)
     target_link_libraries(${MY_TARGET} vulkan-1 glfw fmt)
 elseif (UNIX)
     target_link_libraries(${MY_TARGET} glfw fmt)
@@ -25,7 +25,13 @@ endif ()
 
 # GLSL shaders:
 
-set(GLSL_VALIDATOR /home/jim/VulkanSDK/1.0.61.1/x86_64/bin/glslangValidator)
+set(VULKAN_SDK_VERSION 1.0.61.1)
+
+if(WIN32)
+    set(GLSL_VALIDATOR C:/install_files/VulkanSDK/${VULKAN_SDK_VERSION}/Bin32/glslangValidator.exe)
+elseif(UNIX)
+    set(GLSL_VALIDATOR /home/jim/VulkanSDK/${VULKAN_SDK_VERSION}/x86_64/bin/glslangValidator)
+endif()
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
         "shaders/*.frag"
