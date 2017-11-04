@@ -568,7 +568,7 @@ void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMil
     ubo.fractalTransform[3] = translation.y;
 
     ubo.view = glm::translate(ubo.view, glm::vec3{0, 0, -1});
-    ubo.proj = glm::ortho(-aspect, aspect, 1.f, -1.f, 0.1f, 10.f);
+    ubo.proj = glm::ortho(-1.f, 1.f, 1.f, -1.f, 0.1f, 10.f);
     ubo.fractalTransform.x = aspect * 2.0f / mCurrentZoom;
     ubo.fractalTransform.y = 1 * 2.0f / mCurrentZoom;
     mUniformBuffer.write(&ubo);
@@ -657,44 +657,47 @@ void Application::sOnKey(GLFWwindow *window, int key, int, int action, int)
 
 void Application::onKey(int key, int action)
 {
-    if (action == GLFW_RELEASE) {
-        mMoveDirections.x = 0;
-        mMoveDirections.y = 0;
-        return;
-    }
+    bool pressed = action == GLFW_PRESS;
 
     switch (key) {
         case GLFW_KEY_UP:
         case GLFW_KEY_W:
-            mMoveDirections.y = -1;
+            mMoveDirections.y = pressed ? -1 : 0;
             break;
 
         case GLFW_KEY_DOWN:
         case GLFW_KEY_S:
-            mMoveDirections.y = 1;
+            mMoveDirections.y = pressed ? 1 : 0;
             break;
 
         case GLFW_KEY_LEFT:
         case GLFW_KEY_A:
-            mMoveDirections.x = -1;
+            mMoveDirections.x = pressed ? -1 : 0;
             break;
 
         case GLFW_KEY_RIGHT:
         case GLFW_KEY_D:
-            mMoveDirections.x = 1;
+            mMoveDirections.x = pressed ? 1 : 0;
             break;
 
         case GLFW_KEY_PAGE_UP:
         case GLFW_KEY_Q:
-            mZoomDirection++;
+            if (pressed) {
+                mZoomDirection++;
+            }
             break;
 
         case GLFW_KEY_PAGE_DOWN:
         case GLFW_KEY_E:
-            mZoomDirection--;
+            if (pressed) {
+                mZoomDirection--;
+            }
             break;
 
         case GLFW_KEY_SPACE:
+            if (!pressed) {
+                break;
+            }
             if (mZoomDirection != 0) {
                 mZoomDirection = 0;
             }
