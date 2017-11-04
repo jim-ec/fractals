@@ -12,10 +12,10 @@ StagingBuffer::StagingBuffer(const VkPhysicalDevice &physicalDevice, const VkDev
 
 void StagingBuffer::init(void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkCommandPool pool, VkQueue queue)
 {
-    mHostBuffer.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, size, srcData);
+    mHostBuffer.init(srcData, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    mDeviceBuffer.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, size, nullptr);
+    mDeviceBuffer.init(nullptr, size, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     mHostBuffer.copyTo(mDeviceBuffer, pool, queue);
 }
@@ -26,7 +26,7 @@ void StagingBuffer::destroy()
     mDeviceBuffer.destroy();
 }
 
-VkBuffer StagingBuffer::getBufferHandle()
+VkBuffer const & StagingBuffer::getBufferHandle()
 {
     return mDeviceBuffer.getBufferHandle();
 }

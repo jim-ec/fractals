@@ -4,6 +4,10 @@
   <component name="CidrRootsConfiguration">
     <excludeRoots>
       <file path="$PROJECT_DIR$/build" />
+      <file path="$PROJECT_DIR$/fmt" />
+      <file path="$PROJECT_DIR$/glfw-3.2.1" />
+      <file path="$PROJECT_DIR$/inc" />
+      <file path="$PROJECT_DIR$/lib-win32" />
     </excludeRoots>
   </component>
 </project>

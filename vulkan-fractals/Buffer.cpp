@@ -1,12 +1,12 @@
-#include "BareBuffer.h"
+#include "Buffer.h"
 
-BareBuffer::BareBuffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device)
+Buffer::Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device)
         : mDevice{device}
           , mPhysicalDevice{physicalDevice}
 {
 }
 
-void BareBuffer::init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, VkDeviceSize size, void *srcData)
+void Buffer::init(void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
     mSize = size;
 
@@ -40,20 +40,20 @@ void BareBuffer::init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage
 
     // Optionally map and write memory:
     if (nullptr != srcData) {
-        void *data;
-        vkMapMemory(mDevice, mMemory, 0, size, 0, &data);
-        memcpy(data, srcData, size);
+        void *mappedMemory;
+        vkMapMemory(mDevice, mMemory, 0, size, 0, &mappedMemory);
+        memcpy(mappedMemory, srcData, size);
         vkUnmapMemory(mDevice, mMemory);
     }
 }
 
-void BareBuffer::destroy()
+void Buffer::destroy()
 {
     vkFreeMemory(mDevice, mMemory, nullptr);
     vkDestroyBuffer(mDevice, mBuffer, nullptr);
 }
 
-uint32_t BareBuffer::findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties)
+uint32_t Buffer::findMemoryType(uint32_t filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProps = {};
     vkGetPhysicalDeviceMemoryProperties(mPhysicalDevice, &memProps);
@@ -67,12 +67,12 @@ uint32_t BareBuffer::findMemoryType(uint32_t filter, VkMemoryPropertyFlags prope
     check(false, "Cannot find suitable memory type");
 }
 
-const VkBuffer &BareBuffer::getBufferHandle() const
+const VkBuffer &Buffer::getBufferHandle() const
 {
     return mBuffer;
 }
 
-const VkDeviceMemory &BareBuffer::getMemoryHandle() const
+const VkDeviceMemory &Buffer::getMemoryHandle() const
 {
     return mMemory;
 }
@@ -80,9 +80,9 @@ const VkDeviceMemory &BareBuffer::getMemoryHandle() const
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
-void BareBuffer::copyTo(BareBuffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size)
+void Buffer::copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size)
 {
-    if (size == 0) {
+    if (0 == size) {
         size = mSize;
     }
 
@@ -121,6 +121,23 @@ void BareBuffer::copyTo(BareBuffer dst, VkCommandPool pool, VkQueue queue, VkDev
     vkQueueWaitIdle(queue);
 
     vkFreeCommandBuffers(mDevice, pool, 1, &commandBuffer);
+}
+
+void Buffer::write(void *srcData, VkDeviceSize offset, VkDeviceSize size)
+{
+    if (0 == size) {
+        size = mSize;
+    }
+
+    void *mappedMemory;
+    vkMapMemory(mDevice, mMemory, offset, size, 0, &mappedMemory);
+    memcpy(mappedMemory, srcData, static_cast<size_t>(size));
+    vkUnmapMemory(mDevice, mMemory);
+}
+
+VkDeviceSize Buffer::getSize() const
+{
+    return mSize;
 }
 
 #pragma clang diagnostic pop

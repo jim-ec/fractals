@@ -14,6 +14,7 @@ Application::Application()
         : mVertexBuffer{mPhysicalDevice, mDevice}
           , mIndexBuffer{mPhysicalDevice, mDevice}
           , mPipeline{mPhysicalDevice, mDevice}
+          , mUniformBuffer{mPhysicalDevice, mDevice}
 {
     // Create window:
     if (0 == sInstanceCount++) {
@@ -69,7 +70,9 @@ Application::Application()
     createGraphicsPipeline();
     createFramebuffers();
     createCommandPool();
-    createVertexBuffer();
+    createBuffers();
+    createDescriptorPool();
+    createDescriptorSet();
     createCommandBuffers();
 
     fmt::print("Window creation completed\n");
@@ -368,12 +371,14 @@ void Application::createFramebuffers()
     }
 }
 
-void Application::createVertexBuffer()
+void Application::createBuffers()
 {
     mVertexBuffer.init(mVertices.data(), byteSize(mVertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, mCommandPool,
                        mGraphicsQueue);
     mIndexBuffer.init(mIndices.data(), byteSize(mIndices), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, mCommandPool,
                       mGraphicsQueue);
+    mUniformBuffer.init(nullptr, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 void Application::createCommandPool()
@@ -383,6 +388,51 @@ void Application::createCommandPool()
     info.queueFamilyIndex = mQueueFamilyIndices.graphics;
 
     checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
+}
+
+void Application::createDescriptorPool()
+{
+    VkDescriptorPoolSize size = {};
+    size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    size.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    info.maxSets = 1;
+    info.poolSizeCount = 1;
+    info.pPoolSizes = &size;
+
+    checkVk(vkCreateDescriptorPool(mDevice, &info, nullptr, &mDescriptorPool), "Cannot create descriptor pool");
+}
+
+void Application::createDescriptorSet()
+{
+    {
+        VkDescriptorSetAllocateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        info.descriptorPool = mDescriptorPool;
+        info.descriptorSetCount = 1;
+        info.pSetLayouts = &mPipeline.getDescriptorSetLayout();
+
+        checkVk(vkAllocateDescriptorSets(mDevice, &info, &mDescriptorSet), "Cannot allocate descriptor set");
+    }
+    {
+        VkDescriptorBufferInfo info = {};
+        info.buffer = mUniformBuffer.getBufferHandle();
+        info.offset = 0;
+        info.range = mUniformBuffer.getSize();
+
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write.pBufferInfo = &info;
+        write.dstBinding = 0;
+        write.dstArrayElement = 0;
+        write.dstSet = mDescriptorSet;
+
+        vkUpdateDescriptorSets(mDevice, 1, &write, 0, nullptr);
+    }
 }
 
 void Application::createCommandBuffers()
@@ -431,12 +481,13 @@ void Application::createCommandBuffers()
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.getHandle());
 
         {
-            std::array<VkBuffer, 1> vertexBuffers = {mVertexBuffer.getBufferHandle()};
             std::array<VkDeviceSize, 1> offsets = {0};
-            vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers.data(), offsets.data());
-
-            vkCmdBindIndexBuffer(buffer, mIndexBuffer.getBufferHandle(), 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindVertexBuffers(buffer, 0, 1, &mVertexBuffer.getBufferHandle(), offsets.data());
         }
+
+        vkCmdBindIndexBuffer(buffer, mIndexBuffer.getBufferHandle(), 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.getLayout(), 0, 1, &mDescriptorSet,
+                                0, nullptr);
 
         vkCmdDrawIndexed(buffer, static_cast<uint32_t>(mIndices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(buffer);
@@ -455,6 +506,8 @@ void Application::createCommandBuffers()
 
 Application::~Application()
 {
+    vkDestroyDescriptorPool(mDevice, mDescriptorPool, nullptr);
+    mUniformBuffer.destroy();
     mVertexBuffer.destroy();
     mIndexBuffer.destroy();
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
@@ -479,27 +532,51 @@ Application::~Application()
     }
 }
 
+void Application::syncWithFPS()
+{
+    auto now = std::chrono::system_clock::now();
+    mFPSSync += RENDER_MILLIS;
+    auto waitMillis = std::chrono::duration_cast<std::chrono::milliseconds>(mFPSSync - now);
+
+    if (waitMillis.count() < 0) {
+        fmt::printf("Rendering took longer than specified max fps (%dms)\n", FPS);
+        mFPSSync = now;
+    }
+    else {
+        std::this_thread::sleep_for(waitMillis);
+    }
+}
+
+void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMillis)
+{
+    fmt::printf("passed millis: %d\n", static_cast<int>(passedMillis.count()));
+    UniformBufferObject ubo = {};
+    ubo.model = glm::rotate(glm::mat4{1.0f}, passedMillis.count() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f),
+                                mSwapchainParams.extent.width / static_cast<float>(mSwapchainParams.extent.height),
+                                0.1f, 10.0f);
+    ubo.proj[1][1] *= -1;
+    mUniformBuffer.write(&ubo);
+}
+
 void Application::run()
 {
-    mNextRender = std::chrono::system_clock::now();
+    mFPSSync = std::chrono::system_clock::now();
+
+    auto last = std::chrono::system_clock::now();
 
     while (!glfwWindowShouldClose(mWindow)) {
         glfwPollEvents();
 
+        auto now = std::chrono::system_clock::now();
+        updateUniformBuffer(std::chrono::duration_cast<std::chrono::milliseconds>(now - last));
+        last = now;
+
         draw();
 
         // Wait if rendering was too fast:
-        auto now = std::chrono::system_clock::now();
-        mNextRender += RENDER_MILLIS;
-        auto waitMillis = std::chrono::duration_cast<std::chrono::milliseconds>(mNextRender - now);
-
-        if (waitMillis.count() < 0) {
-            fmt::printf("Rendering took longer than specified max fps (%dms)\n", FPS);
-            mNextRender = now;
-        }
-        else {
-            std::this_thread::sleep_for(waitMillis);
-        }
+        syncWithFPS();
     }
 
     vkDeviceWaitIdle(mDevice);

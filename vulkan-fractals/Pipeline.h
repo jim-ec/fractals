@@ -22,11 +22,11 @@ public:
 
     VkPipeline getHandle() const;
 
-private:
+    VkDescriptorSetLayout const &getDescriptorSetLayout() const;
 
-    struct UniformBufferObject {
-        glm::mat4 model, view, proj;
-    };
+    const VkPipelineLayout &getLayout();
+
+private:
 
     const VkPhysicalDevice &mPhysicalDevice;
     const VkDevice &mDevice;

@@ -5,30 +5,34 @@
 
 #include "util.h"
 
-class BareBuffer
+class Buffer
 {
 
 private:
 
     const VkPhysicalDevice &mPhysicalDevice;
     const VkDevice &mDevice;
-    VkBuffer mBuffer = 0;
-    VkDeviceMemory mMemory = 0;
+    VkBuffer mBuffer = nullptr;
+    VkDeviceMemory mMemory = nullptr;
     VkDeviceSize mSize = 0;
 
 public:
 
-    BareBuffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device);
+    Buffer(const VkPhysicalDevice &physicalDevice, const VkDevice &device);
 
     void destroy();
 
-    void init(VkMemoryPropertyFlags properties, VkBufferUsageFlags usage, VkDeviceSize size, void *srcData);
+    void init(void *srcData, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 
-    void copyTo(BareBuffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size = 0);
+    void write(void *srcData, VkDeviceSize offset = 0, VkDeviceSize size = 0);
+
+    void copyTo(Buffer dst, VkCommandPool pool, VkQueue queue, VkDeviceSize size = 0);
 
     const VkBuffer &getBufferHandle() const;
 
     const VkDeviceMemory &getMemoryHandle() const;
+
+    VkDeviceSize getSize() const;
 
 private:
 

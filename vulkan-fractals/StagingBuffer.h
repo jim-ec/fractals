@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BareBuffer.h"
+#include "Buffer.h"
 
 class StagingBuffer
 {
@@ -13,8 +13,8 @@ public:
 
     void destroy();
 
-    VkBuffer getBufferHandle();
+    VkBuffer const &getBufferHandle();
 
 private:
-    BareBuffer mHostBuffer, mDeviceBuffer;
+    Buffer mHostBuffer, mDeviceBuffer;
 };

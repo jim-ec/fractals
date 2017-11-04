@@ -14,6 +14,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
 #include "Vertex.h"
 #include "util.h"
@@ -41,7 +42,7 @@ private:
     static const std::chrono::milliseconds RENDER_MILLIS;
 
     GLFWwindow *mWindow;
-    std::chrono::system_clock::time_point mNextRender;
+    std::chrono::system_clock::time_point mFPSSync;
 
     std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation", /*"VK_LAYER_RENDERDOC_Capture"*/ }};
     std::vector<const char *> mInstanceExtensions{{VK_EXT_DEBUG_REPORT_EXTENSION_NAME}};
@@ -61,10 +62,13 @@ private:
     std::vector<VkFramebuffer> mSwapchainFramebuffers;
     StagingBuffer mVertexBuffer;
     StagingBuffer mIndexBuffer;
+    Buffer mUniformBuffer;
     VkCommandPool mCommandPool;
     std::vector<VkCommandBuffer> mCommandBuffers;
     VkSemaphore mImageAvailableSemaphore;
     VkSemaphore mRenderFinishedSemaphore;
+    VkDescriptorPool mDescriptorPool;
+    VkDescriptorSet mDescriptorSet;
 
     std::vector<Vertex> mVertices{{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
     std::vector<uint16_t> mIndices{{0, 1, 2, 2, 1, 3}};
@@ -81,6 +85,11 @@ private:
         VkSurfaceFormatKHR surfaceFormat;
         VkExtent2D extent;
     } mSwapchainParams;
+
+    struct UniformBufferObject
+    {
+        glm::mat4 model, view, proj;
+    };
 
     void createInstance();
 
@@ -102,11 +111,21 @@ private:
 
     void createFramebuffers();
 
-    void createVertexBuffer();
+    void createBuffers();
+
+    void createDescriptorPool();
+
+    void createDescriptorSet();
+
+    void createCommandPool();
 
     void createCommandBuffers();
 
     void draw();
+
+    void updateUniformBuffer(const std::chrono::milliseconds &passedMillis);
+
+    void syncWithFPS();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags,
@@ -117,6 +136,4 @@ private:
             const char *layerPrefix,
             const char *msg,
             void *userData);
-
-    void createCommandPool();
 };
