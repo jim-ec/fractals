@@ -1,8 +1,15 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-const int N = 50;
-const vec4 EDGE_COLOR = vec4(1.0, 0.0, 0.0, 1.0);
+const int N = 500;
+
+layout(binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    vec4 fractalTransform;
+    vec4 colors[40];
+} ubo;
 
 layout(location = 0) in vec2 vPosition;
 
@@ -27,12 +34,10 @@ void main() {
         }
     }
 
-    float nf = float(n) / float(N);
-
     if(withinMandelbrot) {
         outColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
     else {
-        outColor = mix(vec4(1.0, 0.0, 1.0, 1.0), EDGE_COLOR, nf);
+        outColor = ubo.colors[n % 40];
     }
 }
