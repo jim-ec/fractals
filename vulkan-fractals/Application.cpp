@@ -93,7 +93,7 @@ Application::Application()
     createCommandBuffers();
     createSemaphores();
 
-    fmt::print("Window creation completed\n");
+    log("Window creation completed");
 }
 
 void Application::onWindowResized(GLFWwindow *window, int width, int height)
@@ -656,10 +656,6 @@ void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMil
 
     mTranslation.x += 0.06 * mMoveDirections.x / mCurrentZoom;
     mTranslation.y += 0.06 * mMoveDirections.y / mCurrentZoom;
-
-    ubo.model = glm::scale(glm::mat4{}, glm::vec3{mCurrentZoom});
-    ubo.view = glm::translate(ubo.view, glm::vec3{0, 0, -1});
-    ubo.proj = glm::ortho(-1.f, 1.f, 1.f, -1.f, 0.1f, 10.f);
 
     ubo.fractalTransform.x = aspect * 2.0f / mCurrentZoom;
     ubo.fractalTransform.y = 1 * 2.0f / mCurrentZoom;

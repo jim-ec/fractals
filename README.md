@@ -45,3 +45,48 @@ To tune the fractal you see, you have to go into the source code, namely `main.c
 Contained inside the `console-fractals` directory.
 
 Displays fractals using the Vulkan API. Exact features have not been set, yet.
+
+## Devel
+
+### Vulkan crashes - first aid
+
+- Enable more validation layers (`VK_LAYER_LUNARG_api_dump`)
+- Recreate objects that depends on other objects, which has been recreated (e.g. Swapchain recreation)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

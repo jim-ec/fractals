@@ -104,7 +104,6 @@ private:
 
     struct UniformBufferObject
     {
-        glm::mat4 model, view, proj;
         glm::vec4 fractalTransform;
     };
 
