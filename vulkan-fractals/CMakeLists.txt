@@ -30,12 +30,10 @@ endif ()
 
 # GLSL shaders:
 
-set(VULKAN_SDK_VERSION 1.0.61.1)
-
 if(WIN32)
-    set(GLSL_VALIDATOR C:/install_files/VulkanSDK/${VULKAN_SDK_VERSION}/Bin32/glslangValidator.exe)
+    set(GLSL_VALIDATOR C:/install_files/VulkanSDK/Bin32/glslangValidator.exe)
 elseif(UNIX)
-    set(GLSL_VALIDATOR /home/jim/VulkanSDK/${VULKAN_SDK_VERSION}/x86_64/bin/glslangValidator)
+    set(GLSL_VALIDATOR /home/jim/VulkanSDK/x86_64/bin/glslangValidator)
 endif()
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES shaders/*.frag shaders/*.vert)

@@ -193,12 +193,12 @@ namespace details {
 	{
 #ifndef NDEBUG
 		auto now = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-		auto millis = now.count() % 1000;
-		auto seconds = now.count() / 1000 % 60;
-		auto minutes = now.count() / 1000 / 60 % 60;
-		auto hours = now.count() / 1000 / 60 / 60 % 24 + 1;
+        auto millis = static_cast<int>(now.count() % 1000);
+        auto seconds = static_cast<int>(now.count() / 1000 % 60);
+        auto minutes = static_cast<int>(now.count() / 1000 / 60 % 60);
+        auto hours = static_cast<int>(now.count() / 1000 / 60 / 60 % 24 + 1);
 
-		fmt::printf("%d:%d:%d:%d %s [%s:%d] ", hours, minutes, seconds, millis, func, file, line);
+        fmt::printf("%d:%d:%d:%d [%s:%d]  %s: ", hours, minutes, seconds, millis, file, line, func);
 		fmt::printf(logMessageFormat, std::forward<TParams>(params)...);
 		fmt::print("\n");
 #endif // NDEBUG
@@ -206,7 +206,13 @@ namespace details {
 
 } // namespace details
 
-#define log(format, ...) details::log(__FUNCTION__, __FILE__, __LINE__, format, __VA_ARGS__)
+#ifdef _WIN32
+#define FUNCTION_NAME __FUNCSIG__
+#else
+#define FUNCTION_NAME __PRETTY_FUNCTION__
+#endif
+
+#define log(...) details::log(FUNCTION_NAME, __FILE__, __LINE__, __VA_ARGS__)
 
 inline glm::vec3 hsvToRgb(float h, float s, float v)
 {

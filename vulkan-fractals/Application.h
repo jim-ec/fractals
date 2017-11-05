@@ -38,15 +38,22 @@ private:
     static int sInstanceCount;
     static const int FPS;
     static const std::chrono::milliseconds RENDER_MILLIS;
+    static const VkDebugReportFlagsEXT DEBUG_REPORT_FLAGS =
+            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
+            VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 
     GLFWwindow *mWindow;
     std::chrono::system_clock::time_point mFPSSync;
 
-    std::vector<const char *> mValidationLayers{{"VK_LAYER_LUNARG_standard_validation",
-                                                        //"VK_LAYER_RENDERDOC_Capture"
-                                                }};
-    std::vector<const char *> mInstanceExtensions{{VK_EXT_DEBUG_REPORT_EXTENSION_NAME}};
-    std::vector<const char *> mDeviceExtensions{{VK_KHR_SWAPCHAIN_EXTENSION_NAME}};
+    std::vector<const char *> mValidationLayers{"VK_LAYER_LUNARG_standard_validation",
+                                                "VK_LAYER_LUNARG_core_validation", "VK_LAYER_GOOGLE_threading",
+                                                "VK_LAYER_LUNARG_monitor", "VK_LAYER_LUNARG_parameter_validation",
+                                                "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_GOOGLE_unique_objects"
+            //"VK_LAYER_LUNARG_api_dump",
+            //"VK_LAYER_RENDERDOC_Capture"
+    };
+    std::vector<const char *> mInstanceExtensions{VK_EXT_DEBUG_REPORT_EXTENSION_NAME};
+    std::vector<const char *> mDeviceExtensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     VkDebugReportCallbackEXT mDebugCallback;
     VkSurfaceKHR mSurface;
     VkPhysicalDevice mPhysicalDevice;
@@ -155,13 +162,13 @@ private:
      */
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     debugCallback(VkDebugReportFlagsEXT flags,
-		VkDebugReportObjectTypeEXT objType,
-		uint64_t obj,
-		size_t location,
-		int32_t code,
-		const char* layerPrefix,
-		const char* msg,
-		void* userData);
+            VkDebugReportObjectTypeEXT objType,
+            uint64_t obj,
+            size_t location,
+            int32_t code,
+            const char *layerPrefix,
+            const char *msg,
+            void *userData);
 
     static void sOnKey(GLFWwindow *window, int key, int scancode, int action, int mods);
 

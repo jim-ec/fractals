@@ -35,8 +35,8 @@ Application::Application()
 
 #ifndef NDEBUG
     // Validation layers:
-    {
-        fmt::printf("Load validation layers ...\n");
+    if (!mValidationLayers.empty()) {
+        log("Load validation layers ...");
 
         std::vector<bool> requestedAreAvailable;
         requestedAreAvailable.resize(mValidationLayers.size());
@@ -47,6 +47,7 @@ Application::Application()
             for (size_t i = 0; i < mValidationLayers.size(); i++) {
                 if (!strcmp(available.layerName, mValidationLayers[i])) {
                     requestedAreAvailable[i] = true;
+                    log("Enable validation layer: %s", available.layerName);
                     break;
                 }
             }
@@ -54,10 +55,10 @@ Application::Application()
 
         // Print unsupported layers:
         auto iter = std::find(requestedAreAvailable.begin(), requestedAreAvailable.end(), false);
-		if (iter != requestedAreAvailable.end()) {
-			check(false, "Requested layer ",
-				mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
-		}
+        if (iter != requestedAreAvailable.end()) {
+            check(false, "Requested layer ", mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)],
+                    " is not available");
+        }
     }
 #endif // NDEBUG
 
@@ -107,16 +108,20 @@ void Application::recreateSwapchain()
 
     destroySwapchain();
 
+    vkDeviceWaitIdle(mDevice);
+
     createSwapchain();
     createSwapchainViews();
     createRenderPass();
     createGraphicsPipeline();
     createFramebuffers();
+    createDescriptorSet();
     createCommandBuffers();
 }
 
 void Application::destroySwapchain()
 {
+    checkVk(vkFreeDescriptorSets(mDevice, mDescriptorPool, 1, &mDescriptorSet), "Cannot free descriptor set");
     for (auto &framebuffer : mSwapchainFramebuffers) {
         vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
     }
@@ -164,7 +169,7 @@ void Application::setupDebugReport()
     VkDebugReportCallbackCreateInfoEXT info = {};
     info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     info.pfnCallback = &debugCallback;
-	info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+    info.flags = DEBUG_REPORT_FLAGS;
 
     checkVk(invokeVk(vkCreateDebugReportCallbackEXT, mInstance, &info, nullptr, &mDebugCallback),
             "Cannot create debug report callback");
@@ -389,7 +394,7 @@ void Application::createSwapchainViews()
 {
     mSwapchainImageViews.resize(mSwapchainImages.size());
 
-	log("Create swapchain image views: %d", mSwapchainImages.size());
+    log("Create swapchain image views: %d", mSwapchainImages.size());
 
     for (size_t i = 0; i < mSwapchainImages.size(); i++) {
         VkImageViewCreateInfo info = {};
@@ -505,6 +510,7 @@ void Application::createDescriptorPool()
 
     VkDescriptorPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     info.maxSets = 1;
     info.poolSizeCount = 1;
     info.pPoolSizes = &size;
@@ -561,36 +567,30 @@ void Application::createCommandBuffers()
         auto &buffer = mCommandBuffers[i];
 
         // Begin command buffer:
-        {
-            VkCommandBufferBeginInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        VkCommandBufferBeginInfo begin = {};
+        begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-            vkBeginCommandBuffer(buffer, &info);
-        }
+        vkBeginCommandBuffer(buffer, &begin);
 
         // Begin render pass:
-        {
-            VkClearValue clearColor = {1.0f, 1.0f, 1.0f, 1.0f};
+        VkClearValue clearColor = {1.0f, 1.0f, 1.0f, 1.0f};
 
-            VkRenderPassBeginInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            info.renderPass = mRenderPass;
-            info.framebuffer = mSwapchainFramebuffers[i];
-            info.renderArea.offset = {0, 0};
-            info.renderArea.extent = mSwapchainParams.extent;
-            info.clearValueCount = 1;
-            info.pClearValues = &clearColor;
+        VkRenderPassBeginInfo beginRenderPass = {};
+        beginRenderPass.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        beginRenderPass.renderPass = mRenderPass;
+        beginRenderPass.framebuffer = mSwapchainFramebuffers[i];
+        beginRenderPass.renderArea.offset = {0, 0};
+        beginRenderPass.renderArea.extent = mSwapchainParams.extent;
+        beginRenderPass.clearValueCount = 1;
+        beginRenderPass.pClearValues = &clearColor;
 
-            vkCmdBeginRenderPass(buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
-        }
+        vkCmdBeginRenderPass(buffer, &beginRenderPass, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.getHandle());
 
-        {
-            std::array<VkDeviceSize, 1> offsets = {0};
-            vkCmdBindVertexBuffers(buffer, 0, 1, &mVertexBuffer.getBufferHandle(), offsets.data());
-        }
+        std::array<VkDeviceSize, 1> offsets = {0};
+        vkCmdBindVertexBuffers(buffer, 0, 1, &mVertexBuffer.getBufferHandle(), offsets.data());
 
         vkCmdBindIndexBuffer(buffer, mIndexBuffer.getBufferHandle(), 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.getLayout(), 0, 1, &mDescriptorSet,
@@ -739,47 +739,47 @@ void Application::draw()
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
 VkBool32 Application::debugCallback(VkDebugReportFlagsEXT flags,
-	VkDebugReportObjectTypeEXT objType,
-	uint64_t obj,
-	size_t location,
-	int32_t code,
-	const char* layerPrefix,
-	const char* msg,
-	void* userData)
+        VkDebugReportObjectTypeEXT,
+        uint64_t,
+        size_t,
+        int32_t,
+        const char *,
+        const char *msg,
+        void *)
 {
-	bool error = false;
-	const char *type;
+    bool error = false;
+    const char *type;
 
-	switch (flags) {
-	case VK_DEBUG_REPORT_ERROR_BIT_EXT:
-		error = true;
-		type = "ERROR";
-		break;
+    switch (flags) {
+        case VK_DEBUG_REPORT_ERROR_BIT_EXT:
+            error = true;
+            type = "ERROR";
+            break;
 
-	case VK_DEBUG_REPORT_WARNING_BIT_EXT:
-		type = "WARN";
-		break;
+        case VK_DEBUG_REPORT_WARNING_BIT_EXT:
+            type = "WARN";
+            break;
 
-	case VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
-		type = "INFO";
-		break;
+        case VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
+            type = "INFO";
+            break;
 
-	case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
-		type = "PERFORMANCE";
-		break;
+        case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
+            type = "PERFORMANCE";
+            break;
 
-	case VK_DEBUG_REPORT_DEBUG_BIT_EXT:
-		type = "DEBUG";
-		break;
+        case VK_DEBUG_REPORT_DEBUG_BIT_EXT:
+            type = "DEBUG";
+            break;
 
-	default:
-		type = "UNKOWN ERROR TYPE";
-	}
+        default:
+            type = "UNKNOWN ERROR TYPE";
+    }
 
-	fmt::printf("VK-LOG[%s]: %s\n", type, msg);
-	if (error) {
-		throw std::runtime_error{ msg };
-	}
+    fmt::printf("VK-LOG[%s]: %s\n", type, msg);
+    if (error) {
+        throw std::runtime_error{msg};
+    }
     return VK_FALSE;
 }
 
