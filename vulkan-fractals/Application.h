@@ -75,7 +75,7 @@ private:
     VkDescriptorPool mDescriptorPool;
     VkDescriptorSet mDescriptorSet;
 
-    glm::vec2 mMoveDirections;
+    glm::vec4 mMoveDirections;
     int mZoomDirection = 0;
     float mCurrentZoom = 1;
     glm::vec2 mTranslation;

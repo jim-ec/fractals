@@ -437,8 +437,7 @@ void Application::createCommandBuffers()
 
         vkCmdBindIndexBuffer(buffer, mIndexBuffer.getBufferHandle(), 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mSwapchain.getPipeline().getLayout(), 0, 1,
-                &mDescriptorSet,
-                0, nullptr);
+                &mDescriptorSet, 0, nullptr);
 
         vkCmdDrawIndexed(buffer, static_cast<uint32_t>(mIndices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(buffer);
@@ -498,8 +497,8 @@ void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMil
 
     mCurrentZoom *= 1 + mZoomDirection * 0.01;
 
-    mTranslation.x += 0.06 * mMoveDirections.x / mCurrentZoom;
-    mTranslation.y += 0.06 * mMoveDirections.y / mCurrentZoom;
+    mTranslation.x += 0.06 * (mMoveDirections[3] - mMoveDirections[1]) / mCurrentZoom;
+    mTranslation.y += 0.06 * (mMoveDirections[2] - mMoveDirections[0]) / mCurrentZoom;
 
     ubo.fractalTransform.x = aspect * 2.0f / mCurrentZoom;
     ubo.fractalTransform.y = 1 * 2.0f / mCurrentZoom;
@@ -636,22 +635,22 @@ void Application::onKey(int key, int action)
     switch (key) {
         case GLFW_KEY_UP:
         case GLFW_KEY_W:
-            mMoveDirections.y = pressed ? -1 : 0;
+            mMoveDirections[0] = pressed ? 1 : 0;
             break;
 
         case GLFW_KEY_DOWN:
         case GLFW_KEY_S:
-            mMoveDirections.y = pressed ? 1 : 0;
+            mMoveDirections[2] = pressed ? 1 : 0;
             break;
 
         case GLFW_KEY_LEFT:
         case GLFW_KEY_A:
-            mMoveDirections.x = pressed ? -1 : 0;
+            mMoveDirections[1] = pressed ? 1 : 0;
             break;
 
         case GLFW_KEY_RIGHT:
         case GLFW_KEY_D:
-            mMoveDirections.x = pressed ? 1 : 0;
+            mMoveDirections[3] = pressed ? 1 : 0;
             break;
 
         case GLFW_KEY_PAGE_UP:
