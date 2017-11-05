@@ -12,8 +12,8 @@ private:
 
     const VkPhysicalDevice &mPhysicalDevice;
     const VkDevice &mDevice;
-    VkBuffer mBuffer = nullptr;
-    VkDeviceMemory mMemory = nullptr;
+    VkBuffer mBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory mMemory = VK_NULL_HANDLE;
     VkDeviceSize mSize = 0;
 
 public:

@@ -54,8 +54,10 @@ Application::Application()
 
         // Print unsupported layers:
         auto iter = std::find(requestedAreAvailable.begin(), requestedAreAvailable.end(), false);
-        check(iter == requestedAreAvailable.end(), "Requested layer ",
-              mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
+		if (iter != requestedAreAvailable.end()) {
+			check(false, "Requested layer ",
+				mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)], " is not available");
+		}
     }
 #endif // NDEBUG
 
@@ -162,7 +164,7 @@ void Application::setupDebugReport()
     VkDebugReportCallbackCreateInfoEXT info = {};
     info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     info.pfnCallback = &debugCallback;
-    info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+	info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 
     checkVk(invokeVk(vkCreateDebugReportCallbackEXT, mInstance, &info, nullptr, &mDebugCallback),
             "Cannot create debug report callback");
@@ -386,6 +388,8 @@ void Application::createSwapchain()
 void Application::createSwapchainViews()
 {
     mSwapchainImageViews.resize(mSwapchainImages.size());
+
+	log("Create swapchain image views: %d", mSwapchainImages.size());
 
     for (size_t i = 0; i < mSwapchainImages.size(); i++) {
         VkImageViewCreateInfo info = {};
@@ -734,16 +738,48 @@ void Application::draw()
 
 #pragma clang diagnostic pop // ignored "-Wreturn-stack-address"
 
-VkBool32 Application::debugCallback(VkDebugReportFlagsEXT,
-        VkDebugReportObjectTypeEXT,
-        uint64_t,
-        size_t,
-        int32_t,
-        const char *,
-        const char *msg,
-        void *)
+VkBool32 Application::debugCallback(VkDebugReportFlagsEXT flags,
+	VkDebugReportObjectTypeEXT objType,
+	uint64_t obj,
+	size_t location,
+	int32_t code,
+	const char* layerPrefix,
+	const char* msg,
+	void* userData)
 {
-    throw std::runtime_error{msg};
+	bool error = false;
+	const char *type;
+
+	switch (flags) {
+	case VK_DEBUG_REPORT_ERROR_BIT_EXT:
+		error = true;
+		type = "ERROR";
+		break;
+
+	case VK_DEBUG_REPORT_WARNING_BIT_EXT:
+		type = "WARN";
+		break;
+
+	case VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
+		type = "INFO";
+		break;
+
+	case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
+		type = "PERFORMANCE";
+		break;
+
+	case VK_DEBUG_REPORT_DEBUG_BIT_EXT:
+		type = "DEBUG";
+		break;
+
+	default:
+		type = "UNKOWN ERROR TYPE";
+	}
+
+	fmt::printf("VK-LOG[%s]: %s\n", type, msg);
+	if (error) {
+		throw std::runtime_error{ msg };
+	}
     return VK_FALSE;
 }
 
@@ -754,7 +790,7 @@ void Application::sOnKey(GLFWwindow *window, int key, int, int action, int)
 
 void Application::onKey(int key, int action)
 {
-    bool pressed = action == GLFW_PRESS;
+    bool pressed = action != GLFW_RELEASE;
 
     switch (key) {
         case GLFW_KEY_UP:

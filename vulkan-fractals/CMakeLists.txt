@@ -3,6 +3,10 @@ set(MY_TARGET vulkan-fractals)
 project(${MY_TARGET})
 
 add_subdirectory(fmt)
+
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw-3.2.1)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -10,6 +14,7 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(inc)
 if (WIN32)
     link_directories(lib-win32)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /w")
 elseif (UNIX)
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lvulkan")
 endif ()

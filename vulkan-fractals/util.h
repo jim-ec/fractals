@@ -8,6 +8,7 @@
 #include <utility>
 #include <fstream>
 #include <cstddef>
+#include <chrono>
 
 #include <vulkan/vulkan.h>
 
@@ -84,8 +85,9 @@ template<class T, class TPfn, class... TParams>
 std::vector<T> listVulkan(TPfn &&pfn, TParams &&...params)
 {
     uint32_t count;
+	std::vector<T> vector;
     (*std::forward<TPfn>(pfn))(std::forward<TParams>(params)..., &count, nullptr);
-    std::vector<T> vector{count};
+	vector.resize(count);
     (*std::forward<TPfn>(pfn))(std::forward<TParams>(params)..., &count, vector.data());
     return std::move(vector);
 };
@@ -175,6 +177,36 @@ auto byteSize(const T &container)
 {
     return container.size() * sizeof(typename T::value_type);
 }
+
+namespace details {
+
+	using namespace std::chrono;
+
+	template<class... TParams>
+	void log(
+		const char *func,
+		const char *file,
+		int line,
+		const char *logMessageFormat,
+		TParams &&...params
+	)
+	{
+#ifndef NDEBUG
+		auto now = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+		auto millis = now.count() % 1000;
+		auto seconds = now.count() / 1000 % 60;
+		auto minutes = now.count() / 1000 / 60 % 60;
+		auto hours = now.count() / 1000 / 60 / 60 % 24 + 1;
+
+		fmt::printf("%d:%d:%d:%d %s [%s:%d] ", hours, minutes, seconds, millis, func, file, line);
+		fmt::printf(logMessageFormat, std::forward<TParams>(params)...);
+		fmt::print("\n");
+#endif // NDEBUG
+	}
+
+} // namespace details
+
+#define log(format, ...) details::log(__FUNCTION__, __FILE__, __LINE__, format, __VA_ARGS__)
 
 inline glm::vec3 hsvToRgb(float h, float s, float v)
 {
