@@ -19,10 +19,19 @@ Application::Application()
         glfwInit();
     }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    mWindow = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+    mWindow = glfwCreateWindow(800, 600, "Fractal Viewer", nullptr, nullptr);
     glfwSetWindowUserPointer(mWindow, this);
     glfwSetKeyCallback(mWindow, &sOnKey);
     glfwSetWindowSizeCallback(mWindow, &onWindowResized);
+
+    fmt::printf("VULKAN - FRACTAL VIEWER:\n"
+                        "============================================================\n"
+                        "WASD - Arrow keys  -  Move around\n"
+                        "QE - Page Up/Down  -  Zoom in/out faster/slower\n"
+                        "F                  -  Toggle fullscreen\n"
+                        "Esc                -  Quit\n"
+                        "Space              -  Stop zoom / Reset to starting position\n"
+                        "============================================================\n");
 
 #ifndef NDEBUG
     // Validation layers:
@@ -222,19 +231,40 @@ void Application::pickPhysicalDevice()
             }
         }
 
-        // Check for features:
-        VkPhysicalDeviceFeatures features = {};
-        vkGetPhysicalDeviceFeatures(device, &features);
-        if (features.shaderFloat64) {
-            fmt::printf("Enable 64 bit floats ...\n");
-            mDeviceFeatures.shaderFloat64 = VK_TRUE;
-        }
-
         return true;
     });
     check(deviceIter != physicalDevices.end(), "Cannot find a physical device with an adequate swapchain");
 
     mPhysicalDevice = *deviceIter;
+
+    {
+        VkPhysicalDeviceProperties properties = {};
+        vkGetPhysicalDeviceProperties(mPhysicalDevice, &properties);
+        const char *type;
+        switch (properties.deviceType) {
+            case VK_PHYSICAL_DEVICE_TYPE_CPU:
+                type = "CPU";
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+                type = "GPU";
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+                type = "integrated GPU";
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+                type = "virtual GPU";
+                break;
+            default:
+                type = "other";
+                break;
+        }
+        fmt::printf("Physical device:\n"
+                            "    Name: %s\n"
+                            "    Type: %s\n"
+                            "    Vulkan API: %d.%d.%d\n", properties.deviceName, type,
+                    VK_VERSION_MAJOR(properties.apiVersion), VK_VERSION_MINOR(properties.apiVersion),
+                    VK_VERSION_PATCH(properties.apiVersion));
+    }
 }
 
 void Application::createLogicalDevice()
@@ -788,6 +818,6 @@ void Application::onKey(int key, int action)
             break;
 
         default:
-            fmt::printf("Unknown key pressed: %d\n", key);
+            break;
     }
 }

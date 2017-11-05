@@ -15,6 +15,7 @@
       <w>subpass</w>
       <w>swapchain</w>
       <w>vert</w>
+      <w>wasd</w>
     </words>
   </dictionary>
 </component>
