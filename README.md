@@ -12,11 +12,19 @@ Just run the top-level `CMakeLists.txt` file.
 
 Tip: `cmake --build . ` builds the cmake project without explicitly using the build system.
 
-Under Fedora, you have to install the following packages:
+Additional packages you have to install:
+
+### Fedora
 
 ```shell
 sudo dnf groupinstall "X Software Development"
 sudo dnf install libXinerama-devel
+```
+
+### Ubuntu
+
+```shell
+sudo apt-get install xorg-dev libglu1-mesa-dev libxinerama-dev
 ```
 
 
