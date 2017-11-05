@@ -75,6 +75,9 @@ private:
     float mCurrentZoom = 1;
     glm::vec2 mTranslation;
 
+    glm::ivec2 mWindowedWindowPos;
+    glm::ivec2 mWindowedWindowSize;
+
     std::vector<Vertex> mVertices{{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
     std::vector<uint16_t> mIndices{{0, 1, 2, 2, 1, 3}};
 
@@ -167,4 +170,6 @@ private:
     void destroySwapchain();
 
     static void onWindowResized(GLFWwindow *window, int width, int height);
+
+    void toggleFullscreen();
 };

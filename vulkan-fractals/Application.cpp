@@ -38,7 +38,6 @@ Application::Application()
             for (size_t i = 0; i < mValidationLayers.size(); i++) {
                 if (!strcmp(available.layerName, mValidationLayers[i])) {
                     requestedAreAvailable[i] = true;
-                    mValidationLayers.push_back(mValidationLayers[i]);
                     break;
                 }
             }
@@ -117,6 +116,23 @@ void Application::destroySwapchain()
     }
     vkFreeCommandBuffers(mDevice, mCommandPool, static_cast<uint32_t>(mCommandBuffers.size()), mCommandBuffers.data());
     vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
+}
+
+void Application::toggleFullscreen()
+{
+    if (nullptr == glfwGetWindowMonitor(mWindow)) {
+        // Enable fullscreen:
+        int w, h;
+        glfwGetWindowPos(mWindow, &mWindowedWindowPos.x, &mWindowedWindowPos.y);
+        glfwGetWindowSize(mWindow, &mWindowedWindowSize.x, &mWindowedWindowSize.y);
+        glfwGetMonitorPhysicalSize(glfwGetPrimaryMonitor(), &w, &h);
+        glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, w, h, GLFW_DONT_CARE);
+    }
+    else {
+        // Disable fullscreen:
+        glfwSetWindowMonitor(mWindow, nullptr, mWindowedWindowPos.x, mWindowedWindowPos.y, mWindowedWindowSize.x,
+                             mWindowedWindowSize.y, GLFW_DONT_CARE);
+    }
 }
 
 void Application::createInstance()
@@ -432,6 +448,7 @@ void Application::createCommandPool()
 {
     VkCommandPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     info.queueFamilyIndex = mQueueFamilyIndices.graphics;
 
     checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
@@ -580,7 +597,6 @@ void Application::syncWithFPS()
     auto waitMillis = std::chrono::duration_cast<std::chrono::milliseconds>(mFPSSync - now);
 
     if (waitMillis.count() < 0) {
-        fmt::printf("Rendering took longer than specified max fps (%dms)\n", FPS);
         mFPSSync = now;
     }
     else {
@@ -754,6 +770,13 @@ void Application::onKey(int key, int action)
                 mCurrentZoom = 1;
                 mTranslation = {};
             }
+            break;
+
+        case GLFW_KEY_F:
+            if (!pressed) {
+                return;
+            }
+            toggleFullscreen();
             break;
 
         default:

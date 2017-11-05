@@ -30,8 +30,6 @@ public:
 
     const VkBuffer &getBufferHandle() const;
 
-    const VkDeviceMemory &getMemoryHandle() const;
-
     VkDeviceSize getSize() const;
 
 private:

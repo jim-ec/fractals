@@ -72,11 +72,6 @@ const VkBuffer &Buffer::getBufferHandle() const
     return mBuffer;
 }
 
-const VkDeviceMemory &Buffer::getMemoryHandle() const
-{
-    return mMemory;
-}
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
