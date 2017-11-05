@@ -34,49 +34,6 @@ Application::Application()
             "x                  -  Print current zoom\n"
             "============================================================\n");
 
-#ifndef NDEBUG
-    // Validation layers:
-    if (!mValidationLayers.empty()) {
-        log("Load validation layers ...");
-
-        std::vector<bool> requestedAreAvailable;
-        requestedAreAvailable.resize(mValidationLayers.size());
-        auto availableLayers = listVulkan<VkLayerProperties>(&vkEnumerateInstanceLayerProperties);
-
-        // Check for available layers:
-        for (auto &available : availableLayers) {
-            for (size_t i = 0; i < mValidationLayers.size(); i++) {
-                if (!strcmp(available.layerName, mValidationLayers[i])) {
-                    requestedAreAvailable[i] = true;
-                    log("Enable validation layer: %s", available.layerName);
-                    break;
-                }
-            }
-        }
-
-        // Print unsupported layers:
-        auto iter = std::find(requestedAreAvailable.begin(), requestedAreAvailable.end(), false);
-        if (iter != requestedAreAvailable.end()) {
-            check(false, "Requested layer ", mValidationLayers[std::distance(requestedAreAvailable.begin(), iter)],
-                    " is not available");
-        }
-    }
-#endif // NDEBUG
-
-    // Extensions:
-    {
-        uint32_t glfwExtensionCount;
-        const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        for (uint32_t i = 0; i < glfwExtensionCount; i++) {
-            mInstanceExtensions.push_back(glfwExtensions[i]);
-        }
-
-#ifndef NDEBUG
-        mInstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-#endif // NDEBUG
-    }
-
     createInstance();
     setupDebugReport();
     createSurface();
@@ -144,12 +101,58 @@ void Application::toggleFullscreen()
 
 void Application::createInstance()
 {
+    std::vector<const char *> layers;
+
+#ifndef NDEBUG
+    // Validation layers:
+    if (!mRequestedValidationLayers.empty()) {
+        log("Load validation layers ...");
+
+        std::vector<bool> requestedAreAvailable;
+        requestedAreAvailable.resize(mRequestedValidationLayers.size());
+        auto availableLayers = listVulkan<VkLayerProperties>(&vkEnumerateInstanceLayerProperties);
+
+        // Check for available layers:
+        for (auto &available : availableLayers) {
+            for (size_t i = 0; i < mRequestedValidationLayers.size(); i++) {
+                if (!strcmp(available.layerName, mRequestedValidationLayers[i])) {
+                    requestedAreAvailable[i] = true;
+                    layers.emplace_back(mRequestedValidationLayers[i]);
+                    log("Enable validation layer: %s", mRequestedValidationLayers[i]);
+                    break;
+                }
+            }
+        }
+
+        // Print unsupported layers:
+        auto iter = std::find(requestedAreAvailable.begin(), requestedAreAvailable.end(), false);
+        if (iter != requestedAreAvailable.end()) {
+            log("Requested layer %s is not available",
+                    mRequestedValidationLayers[std::distance(requestedAreAvailable.begin(), iter)]);
+        }
+    }
+#endif // NDEBUG
+
+    // Extensions:
+    {
+        uint32_t glfwExtensionCount;
+        const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+        for (uint32_t i = 0; i < glfwExtensionCount; i++) {
+            mInstanceExtensions.push_back(glfwExtensions[i]);
+        }
+
+#ifndef NDEBUG
+        mInstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif // NDEBUG
+    }
+
     VkInstanceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     info.enabledExtensionCount = static_cast<uint32_t>(mInstanceExtensions.size());
     info.ppEnabledExtensionNames = mInstanceExtensions.data();
-    info.enabledLayerCount = static_cast<uint32_t>(mValidationLayers.size());
-    info.ppEnabledLayerNames = mValidationLayers.data();
+    info.enabledLayerCount = static_cast<uint32_t>(layers.size());
+    info.ppEnabledLayerNames = layers.data();
 
     checkVk(vkCreateInstance(&info, nullptr, &mInstance), "Cannot create Vulkan instance");
 }
