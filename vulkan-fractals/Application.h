@@ -22,6 +22,7 @@
 #include "Pipeline.h"
 #include "Swapchain.h"
 #include "QueueFamilyIndices.h"
+#include "SwapchainParams.h"
 
 #pragma once
 

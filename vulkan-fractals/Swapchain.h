@@ -5,6 +5,7 @@
 #include "util.h"
 #include "Pipeline.h"
 #include "QueueFamilyIndices.h"
+#include "SwapchainParams.h"
 
 class Swapchain
 {
