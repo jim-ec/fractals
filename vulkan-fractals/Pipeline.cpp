@@ -168,17 +168,17 @@ void Pipeline::destroy()
     }
 }
 
-VkPipeline Pipeline::getHandle() const
+const VkPipeline &Pipeline::getHandle() const
 {
     return mPipeline;
 }
 
-VkDescriptorSetLayout const &Pipeline::getDescriptorSetLayout() const
+const VkDescriptorSetLayout &Pipeline::getDescriptorSetLayout() const
 {
     return mDescriptorSetLayout;
 }
 
-VkPipelineLayout const &Pipeline::getLayout()
+const VkPipelineLayout &Pipeline::getLayout() const
 {
     return mPipelineLayout;
 }

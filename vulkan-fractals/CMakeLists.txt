@@ -23,7 +23,7 @@ elseif (UNIX)
 endif ()
 
 # Executable:
-set(SOURCE_FILES main.cpp Application.cpp Application.h util.h util.cpp Vertex.cpp Vertex.h Buffer.cpp Buffer.h StagingBuffer.cpp StagingBuffer.h Pipeline.cpp Pipeline.h)
+set(SOURCE_FILES main.cpp Application.cpp Application.h util.h util.cpp Vertex.cpp Vertex.h Buffer.cpp Buffer.h StagingBuffer.cpp StagingBuffer.h Pipeline.cpp Pipeline.h Swapchain.cpp Swapchain.h QueueFamilyIndices.h)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 # Link libraries:

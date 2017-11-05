@@ -20,11 +20,11 @@ public:
 
     void destroy();
 
-    VkPipeline getHandle() const;
+    const VkPipeline &getHandle() const;
 
-    VkDescriptorSetLayout const &getDescriptorSetLayout() const;
+    const VkDescriptorSetLayout &getDescriptorSetLayout() const;
 
-    const VkPipelineLayout &getLayout();
+    const VkPipelineLayout &getLayout() const;
 
 private:
 

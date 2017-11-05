@@ -20,6 +20,8 @@
 #include "util.h"
 #include "StagingBuffer.h"
 #include "Pipeline.h"
+#include "Swapchain.h"
+#include "QueueFamilyIndices.h"
 
 #pragma once
 
@@ -62,12 +64,7 @@ private:
     VkDevice mDevice;
     VkQueue mGraphicsQueue;
     VkQueue mPresentQueue;
-    VkSwapchainKHR mSwapchain;
-    std::vector<VkImage> mSwapchainImages;
-    std::vector<VkImageView> mSwapchainImageViews;
-    VkRenderPass mRenderPass;
-    Pipeline mPipeline;
-    std::vector<VkFramebuffer> mSwapchainFramebuffers;
+    Swapchain mSwapchain;
     StagingBuffer mVertexBuffer;
     StagingBuffer mIndexBuffer;
     Buffer mUniformBuffer;
@@ -89,18 +86,9 @@ private:
     std::vector<Vertex> mVertices{{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
     std::vector<uint16_t> mIndices{{0, 1, 2, 2, 1, 3}};
 
-    struct
-    {
-        uint32_t graphics = static_cast<uint32_t>(-1);
-        uint32_t present = static_cast<uint32_t>(-1);
-    } mQueueFamilyIndices;
+    QueueFamilyIndices mQueueFamilyIndices;
 
-    struct
-    {
-        VkPresentModeKHR presentMode;
-        VkSurfaceFormatKHR surfaceFormat;
-        VkExtent2D extent;
-    } mSwapchainParams;
+    SwapchainParams mSwapchainParams;
 
     struct UniformBufferObject
     {
@@ -119,16 +107,6 @@ private:
 
     void createLogicalDevice();
 
-    void createSwapchain();
-
-    void createSwapchainViews();
-
-    void createRenderPass();
-
-    void createGraphicsPipeline();
-
-    void createFramebuffers();
-
     void createBuffers();
 
     void createDescriptorPool();
@@ -141,11 +119,21 @@ private:
 
     void createSemaphores();
 
+    void destroySwapchain();
+
     void draw();
 
     void updateUniformBuffer(const std::chrono::milliseconds &passedMillis);
 
     void syncWithFPS();
+
+    static void sOnKey(GLFWwindow *window, int key, int scancode, int action, int mods);
+
+    void onKey(int key, int action);
+
+    static void onWindowResized(GLFWwindow *window, int width, int height);
+
+    void toggleFullscreen();
 
     /**
      * Vulkan debug report callback
@@ -168,14 +156,4 @@ private:
             const char *layerPrefix,
             const char *msg,
             void *userData);
-
-    static void sOnKey(GLFWwindow *window, int key, int scancode, int action, int mods);
-
-    void onKey(int key, int action);
-
-    void destroySwapchain();
-
-    static void onWindowResized(GLFWwindow *window, int width, int height);
-
-    void toggleFullscreen();
 };
