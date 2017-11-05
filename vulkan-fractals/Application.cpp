@@ -131,7 +131,6 @@ void Application::destroySwapchain()
     for (auto &view : mSwapchainImageViews) {
         vkDestroyImageView(mDevice, view, nullptr);
     }
-    vkFreeCommandBuffers(mDevice, mCommandPool, static_cast<uint32_t>(mCommandBuffers.size()), mCommandBuffers.data());
     vkDestroySwapchainKHR(mDevice, mSwapchain, nullptr);
 }
 
@@ -492,12 +491,26 @@ void Application::createBuffers()
 
 void Application::createCommandPool()
 {
-    VkCommandPoolCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    info.queueFamilyIndex = mQueueFamilyIndices.graphics;
+    {
+        VkCommandPoolCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        info.queueFamilyIndex = mQueueFamilyIndices.graphics;
 
-    checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
+        checkVk(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool), "Cannot create command pool");
+    }
+
+    // Allocate command buffers:
+    mCommandBuffers.resize(mSwapchainFramebuffers.size());
+    {
+        VkCommandBufferAllocateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        info.commandBufferCount = static_cast<uint32_t>(mCommandBuffers.size());
+        info.commandPool = mCommandPool;
+        info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+        checkVk(vkAllocateCommandBuffers(mDevice, &info, mCommandBuffers.data()), "Cannot allocate command buffers");
+    }
 }
 
 void Application::createDescriptorPool()
@@ -548,18 +561,6 @@ void Application::createDescriptorSet()
 
 void Application::createCommandBuffers()
 {
-    // Allocate command buffers:
-    mCommandBuffers.resize(mSwapchainFramebuffers.size());
-    {
-        VkCommandBufferAllocateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        info.commandBufferCount = static_cast<uint32_t>(mCommandBuffers.size());
-        info.commandPool = mCommandPool;
-        info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-        checkVk(vkAllocateCommandBuffers(mDevice, &info, mCommandBuffers.data()), "Cannot allocate command buffers");
-    }
-
     // Record command buffers:
     for (size_t i = 0; i < mCommandBuffers.size(); i++) {
         auto &buffer = mCommandBuffers[i];
