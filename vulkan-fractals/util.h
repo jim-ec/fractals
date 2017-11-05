@@ -17,6 +17,7 @@
 #include <fmt/ostream.h>
 #include <fmt/time.h>
 #include <fmt/container.h>
+#include <glm/glm.hpp>
 
 extern const std::array<std::pair<VkResult, const char *>, 18> VULKAN_ERROR_STRINGS;
 
@@ -173,4 +174,59 @@ template<class T>
 auto byteSize(const T &container)
 {
     return container.size() * sizeof(typename T::value_type);
+}
+
+inline glm::vec3 hsvToRgb(float h, float s, float v)
+{
+    float c = v * s;
+    auto hPrime = static_cast<float>(fmod(h / 60.0, 6));
+    auto x = static_cast<float>(c * (1 - fabs(fmod(hPrime, 2) - 1)));
+    float m = v - c;
+    float r, g, b;
+
+    if (0 <= hPrime && hPrime < 1) {
+        r = c;
+        g = x;
+        b = 0;
+    }
+    else if (1 <= hPrime && hPrime < 2) {
+        r = x;
+        g = c;
+        b = 0;
+    }
+    else if (2 <= hPrime && hPrime < 3) {
+        r = 0;
+        g = c;
+        b = x;
+    }
+    else if (3 <= hPrime && hPrime < 4) {
+        r = 0;
+        g = x;
+        b = c;
+    }
+    else if (4 <= hPrime && hPrime < 5) {
+        r = x;
+        g = 0;
+        b = c;
+    }
+    else if (5 <= hPrime && hPrime < 6) {
+        r = c;
+        g = 0;
+        b = x;
+    }
+    else {
+        r = 0;
+        g = 0;
+        b = 0;
+    }
+
+    r += m;
+    g += m;
+    b += m;
+
+    glm::vec3 ret;
+    ret.r = r;
+    ret.g = g;
+    ret.b = b;
+    return ret;
 }

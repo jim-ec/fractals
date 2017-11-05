@@ -623,9 +623,8 @@ void Application::updateUniformBuffer(const std::chrono::milliseconds &passedMil
     ubo.fractalTransform[2] = mTranslation.x;
     ubo.fractalTransform[3] = mTranslation.y;
 
-    // todo: create colors:
-    for (auto &color : ubo.colors) {
-        color = glm::vec4{1, 0, 0, 1};
+    for (size_t i = 0; i < ubo.colors.size(); i++) {
+        ubo.colors[i] = glm::vec4{hsvToRgb(static_cast<float>(i) / ubo.colors.size() * 360.f, .6, .9), 1.0};
     }
 
     mUniformBuffer.write(&ubo);
