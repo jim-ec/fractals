@@ -50,6 +50,7 @@ private:
     VkDebugReportCallbackEXT mDebugCallback;
     VkSurfaceKHR mSurface;
     VkPhysicalDevice mPhysicalDevice;
+    VkPhysicalDeviceFeatures mDeviceFeatures = {};
     VkInstance mInstance;
     VkDevice mDevice;
     VkQueue mGraphicsQueue;

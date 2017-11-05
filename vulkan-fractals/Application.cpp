@@ -222,6 +222,14 @@ void Application::pickPhysicalDevice()
             }
         }
 
+        // Check for features:
+        VkPhysicalDeviceFeatures features = {};
+        vkGetPhysicalDeviceFeatures(device, &features);
+        if (features.shaderFloat64) {
+            fmt::printf("Enable 64 bit floats ...\n");
+            mDeviceFeatures.shaderFloat64 = VK_TRUE;
+        }
+
         return true;
     });
     check(deviceIter != physicalDevices.end(), "Cannot find a physical device with an adequate swapchain");
@@ -273,6 +281,7 @@ void Application::createLogicalDevice()
     info.pQueueCreateInfos = queueInfos.data();
     info.enabledExtensionCount = static_cast<uint32_t>(mDeviceExtensions.size());
     info.ppEnabledExtensionNames = mDeviceExtensions.data();
+    info.pEnabledFeatures = &mDeviceFeatures;
 
     checkVk(vkCreateDevice(mPhysicalDevice, &info, nullptr, &mDevice), "Cannot create logical device");
 
@@ -772,6 +781,10 @@ void Application::onKey(int key, int action)
                 return;
             }
             toggleFullscreen();
+            break;
+
+        case GLFW_KEY_ESCAPE:
+            glfwSetWindowShouldClose(mWindow, GLFW_TRUE);
             break;
 
         default:

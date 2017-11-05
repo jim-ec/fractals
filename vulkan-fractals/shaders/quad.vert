@@ -10,7 +10,7 @@ layout(binding = 0) uniform UniformBufferObject {
 
 layout(location = 0) in vec2 inPosition;
 
-layout(location = 0) out vec2 vPosition;
+layout(location = 0) out highp vec2 vPosition;
 
 out gl_PerVertex {
     vec4 gl_Position;

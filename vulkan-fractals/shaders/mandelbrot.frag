@@ -10,13 +10,13 @@ const vec4 COLORS[COLOR_COUNT] = vec4[](
     vec4(0.341176471, 0.054901961, 0.141176471, 1.0)
 );
 
-layout(location = 0) in vec2 vPosition;
+layout(location = 0) in highp vec2 vPosition;
 
 layout(location = 0) out vec4 outColor;
 
-vec2 multiplyComplex(vec2 a, vec2 b) {
-    float real = (a.x * b.x) - (a.y * b.y);
-    float imag = (a.x * b.y) + (a.y * b.x);
+highp vec2 multiplyComplex(highp vec2 a, highp vec2 b) {
+    double real = (a.x * b.x) - (a.y * b.y);
+    double imag = (a.x * b.y) + (a.y * b.x);
     return vec2(real, imag);
 }
 
