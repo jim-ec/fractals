@@ -19,19 +19,20 @@ Application::Application()
         glfwInit();
     }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    mWindow = glfwCreateWindow(800, 600, "Fractal Viewer", nullptr, nullptr);
+    mWindow = glfwCreateWindow(1200, 900, "Fractal Viewer", nullptr, nullptr);
     glfwSetWindowUserPointer(mWindow, this);
     glfwSetKeyCallback(mWindow, &sOnKey);
     glfwSetWindowSizeCallback(mWindow, &onWindowResized);
 
     fmt::printf("VULKAN - FRACTAL VIEWER:\n"
-                        "============================================================\n"
-                        "WASD - Arrow keys  -  Move around\n"
-                        "QE - Page Up/Down  -  Zoom in/out faster/slower\n"
-                        "F                  -  Toggle fullscreen\n"
-                        "Esc                -  Quit\n"
-                        "Space              -  Stop zoom / Reset to starting position\n"
-                        "============================================================\n");
+            "============================================================\n"
+            "WASD - Arrow keys  -  Move around\n"
+            "QE - Page Up/Down  -  Zoom in/out faster/slower\n"
+            "F                  -  Toggle fullscreen\n"
+            "Esc                -  Quit\n"
+            "Space              -  Stop zoom / Reset to starting position\n"
+            "x                  -  Print current zoom\n"
+            "============================================================\n");
 
 #ifndef NDEBUG
     // Validation layers:
@@ -147,7 +148,7 @@ void Application::toggleFullscreen()
     else {
         // Disable fullscreen:
         glfwSetWindowMonitor(mWindow, nullptr, mWindowedWindowPos.x, mWindowedWindowPos.y, mWindowedWindowSize.x,
-                             mWindowedWindowSize.y, GLFW_DONT_CARE);
+                mWindowedWindowSize.y, GLFW_DONT_CARE);
     }
 }
 
@@ -190,14 +191,14 @@ void Application::pickPhysicalDevice()
 
         // Check for required extensions:
         auto availableExtensions = listVulkan<VkExtensionProperties>(&vkEnumerateDeviceExtensionProperties, device,
-                                                                     nullptr);
+                nullptr);
         if (std::find_if(mDeviceExtensions.begin(), mDeviceExtensions.end(),
-                         [&availableExtensions](const char *requiredExtension) {
-                             return std::find_if(availableExtensions.begin(), availableExtensions.end(),
-                                                 [&requiredExtension](const VkExtensionProperties &extension) {
-                                                     return !strcmp(extension.extensionName, requiredExtension);
-                                                 }) != availableExtensions.end();
-                         }) == mDeviceExtensions.end()) {
+                [&availableExtensions](const char *requiredExtension) {
+                    return std::find_if(availableExtensions.begin(), availableExtensions.end(),
+                            [&requiredExtension](const VkExtensionProperties &extension) {
+                                return !strcmp(extension.extensionName, requiredExtension);
+                            }) != availableExtensions.end();
+                }) == mDeviceExtensions.end()) {
             return false;
         }
 
@@ -266,11 +267,10 @@ void Application::pickPhysicalDevice()
                 break;
         }
         fmt::printf("Physical device:\n"
-                            "    Name: %s\n"
-                            "    Type: %s\n"
-                            "    Vulkan API: %d.%d.%d\n", properties.deviceName, type,
-                    VK_VERSION_MAJOR(properties.apiVersion), VK_VERSION_MINOR(properties.apiVersion),
-                    VK_VERSION_PATCH(properties.apiVersion));
+                        "    Name: %s\n"
+                        "    Type: %s\n"
+                        "    Vulkan API: %d.%d.%d\n", properties.deviceName, type, VK_VERSION_MAJOR(properties.apiVersion),
+                VK_VERSION_MINOR(properties.apiVersion), VK_VERSION_PATCH(properties.apiVersion));
     }
 }
 
@@ -279,7 +279,7 @@ void Application::createLogicalDevice()
     // Get queue family index:
     {
         auto queueFamilies = listVulkan<VkQueueFamilyProperties>(&vkGetPhysicalDeviceQueueFamilyProperties,
-                                                                 mPhysicalDevice);
+                mPhysicalDevice);
 
         // Find graphics queue:
         auto iter = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](auto &family) {
@@ -360,9 +360,9 @@ void Application::createSwapchain()
         int width, height;
         glfwGetWindowSize(mWindow, &width, &height);
         mSwapchainParams.extent.width = clamp(static_cast<uint32_t>(width), caps.minImageExtent.width,
-                                              caps.maxImageExtent.width);
+                caps.maxImageExtent.width);
         mSwapchainParams.extent.height = clamp(static_cast<uint32_t>(height), caps.minImageExtent.height,
-                                               caps.maxImageExtent.height);
+                caps.maxImageExtent.height);
     }
     info.imageExtent = mSwapchainParams.extent;
 
@@ -393,8 +393,6 @@ void Application::createSwapchain()
 void Application::createSwapchainViews()
 {
     mSwapchainImageViews.resize(mSwapchainImages.size());
-
-    log("Create swapchain image views: %d", mSwapchainImages.size());
 
     for (size_t i = 0; i < mSwapchainImages.size(); i++) {
         VkImageViewCreateInfo info = {};
@@ -485,11 +483,11 @@ void Application::createFramebuffers()
 void Application::createBuffers()
 {
     mVertexBuffer.init(mVertices.data(), byteSize(mVertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, mCommandPool,
-                       mGraphicsQueue);
+            mGraphicsQueue);
     mIndexBuffer.init(mIndices.data(), byteSize(mIndices), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, mCommandPool,
-                      mGraphicsQueue);
+            mGraphicsQueue);
     mUniformBuffer.init(nullptr, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 void Application::createCommandPool()
@@ -594,7 +592,7 @@ void Application::createCommandBuffers()
 
         vkCmdBindIndexBuffer(buffer, mIndexBuffer.getBufferHandle(), 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.getLayout(), 0, 1, &mDescriptorSet,
-                                0, nullptr);
+                0, nullptr);
 
         vkCmdDrawIndexed(buffer, static_cast<uint32_t>(mIndices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(buffer);
@@ -694,7 +692,7 @@ void Application::draw()
     uint32_t imageIndex;
     {
         auto result = vkAcquireNextImageKHR(mDevice, mSwapchain, std::numeric_limits<uint64_t>::max(),
-                                            mImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+                mImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateSwapchain();
             check(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Cannot acquire next swapchain image");
@@ -847,6 +845,13 @@ void Application::onKey(int key, int action)
 
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(mWindow, GLFW_TRUE);
+            break;
+
+        case GLFW_KEY_X:
+            if (!pressed) {
+                return;
+            }
+            fmt::printf("Current zoom: %dx\n", static_cast<int>(mCurrentZoom));
             break;
 
         default:
