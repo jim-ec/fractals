@@ -6,7 +6,6 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     vec4 fractalTransform;
-    vec4 colors[40];
 } ubo;
 
 layout(location = 0) in vec2 inPosition;

@@ -2,14 +2,13 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 const int N = 500;
-
-layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-    vec4 fractalTransform;
-    vec4 colors[40];
-} ubo;
+const int COLOR_COUNT = 4;
+const vec4 COLORS[COLOR_COUNT] = vec4[](
+    vec4(1.0, 1.0, 1.0, 1.0),
+    vec4(0.070588235, 0.137254902, 0.588235294, 1.0),
+    vec4(0.97254902, 0.854901961, 0.321568627, 1.0),
+    vec4(0.341176471, 0.054901961, 0.141176471, 1.0)
+);
 
 layout(location = 0) in vec2 vPosition;
 
@@ -38,6 +37,6 @@ void main() {
         outColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
     else {
-        outColor = ubo.colors[n % 40];
+        outColor = COLORS[n % COLOR_COUNT];
     }
 }

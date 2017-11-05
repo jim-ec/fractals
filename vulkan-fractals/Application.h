@@ -98,7 +98,6 @@ private:
     {
         glm::mat4 model, view, proj;
         glm::vec4 fractalTransform;
-        std::array<glm::vec4, 40> colors;
     };
 
     void recreateSwapchain();
