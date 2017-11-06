@@ -700,7 +700,7 @@ void Application::onKey(int key, int action)
             if (!pressed) {
                 return;
             }
-            fmt::printf("Current zoom: %dx\n", static_cast<int>(mCurrentZoom));
+            fmt::printf("Current zoom: x %.2g\n", static_cast<double>(mCurrentZoom));
             break;
 
         default:
