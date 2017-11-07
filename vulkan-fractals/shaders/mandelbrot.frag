@@ -9,7 +9,7 @@ const vec4 COLORS[COLOR_COUNT] = vec4[](
     vec4(0.97254902, 0.854901961, 0.321568627, 1.0),
     vec4(0.341176471, 0.054901961, 0.141176471, 1.0)
 );
-const int STRETCH = 15;
+const int STRETCH = 5;
 
 layout(location = 0) in vec2 vPosition;
 

@@ -30,7 +30,7 @@ sudo apt-get install xorg-dev libglu1-mesa-dev libxinerama-dev
 
 ## console-fractals
 
-Contained inside the `console-fractals` directory.
+Contained in the `console-fractals` directory.
 
 Prints a fractal, either Mandelbrot or Julia to the console.
 The image is pretty large, therefore it's recommended to set
@@ -42,9 +42,9 @@ To tune the fractal you see, you have to go into the source code, namely `main.c
 
 ## vulkan-fractals
 
-Contained inside the `console-fractals` directory.
+Contained in the `vulkan-fractals` directory.
 
-Displays fractals using the Vulkan API. Exact features have not been set, yet.
+Real-time and interactive rendering of the Mandelbrot fractal.
 
 ## Devel
 
@@ -52,41 +52,5 @@ Displays fractals using the Vulkan API. Exact features have not been set, yet.
 
 - Enable more validation layers (`VK_LAYER_LUNARG_api_dump`)
 - Recreate objects that depends on other objects, which has been recreated (e.g. Swapchain recreation)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- Check alignment (reasonable data in Renderdoc mesh output)
 
