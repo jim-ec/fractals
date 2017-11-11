@@ -18,8 +18,6 @@ include_directories(inc)
 if (WIN32)
     link_directories(lib-win32)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /w")
-elseif (UNIX)
-    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lvulkan")
 endif ()
 
 # Executable:
@@ -30,16 +28,11 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 if (WIN32)
     target_link_libraries(${PROJECT_NAME} vulkan-1 glfw fmt)
 elseif (UNIX)
-    target_link_libraries(${PROJECT_NAME} glfw fmt)
+    target_link_libraries(${PROJECT_NAME} vulkan glfw fmt)
 endif ()
 
 # GLSL shaders:
-
-if (WIN32)
-    set(GLSL_VALIDATOR C:/install_files/VulkanSDK/Bin32/glslangValidator.exe)
-elseif (UNIX)
-    set(GLSL_VALIDATOR /home/jim/VulkanSDK/x86_64/bin/glslangValidator)
-endif ()
+set(GLSL_VALIDATOR $ENV{GLSL_VALIDATOR})
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES shaders/*.frag shaders/*.vert)
 

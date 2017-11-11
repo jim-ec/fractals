@@ -4,6 +4,7 @@
       <w>framebuffer</w>
       <w>framebuffers</w>
       <w>fullscreen</w>
+      <w>glsl</w>
       <w>hardcode</w>
       <w>multisample</w>
       <w>ndebug</w>
