@@ -33,7 +33,7 @@ build/
 # IDEA:
 **/.idea/workspace.xml
 **/.idea/tasks.xml
-**/cmake-build-debug/
+**/cmake-build-*/
 
 # Keep lib directories:
 !*/lib-win32/*
